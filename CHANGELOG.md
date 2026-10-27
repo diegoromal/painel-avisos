@@ -11,9 +11,9 @@ Todas as alterações relevantes são registradas aqui, em formato simples inspi
 - Histórico de versões separado neste CHANGELOG.
 - `.gitignore` adicionado e `dist/` removido do repositório; os binários continuam sendo gerados por `build.sh`.
 
-### Previsto (implementação em etapa seguinte)
+### Adicionado
 
-- Botão "Instalar na TV" no painel administrativo, em Telas.
+- Botão "Instalar na TV" no painel administrativo, em Telas, com comandos, escolha de monitor, logon automático e download de instalador configurado `.bat`.
 - Endpoint `/install/tv-kiosk.ps1` para obter o instalador da TV.
 
 ## [1.2.1]

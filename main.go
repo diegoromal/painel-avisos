@@ -20,7 +20,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-var version = "1.2.1"
+var version = "1.3.0"
 
 //go:embed web
 var webFS embed.FS
@@ -274,6 +274,7 @@ func (a *App) routes() http.Handler {
 		}
 	}
 	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) { http.Redirect(w, r, "/admin", http.StatusFound) })
+	mux.HandleFunc("GET /install/tv-kiosk.ps1", a.handleTVInstaller)
 	mux.HandleFunc("GET /admin", page("admin.html"))
 	mux.HandleFunc("GET /tela", a.handleTela)
 	mux.HandleFunc("GET /tela-sw.js", func(w http.ResponseWriter, r *http.Request) {

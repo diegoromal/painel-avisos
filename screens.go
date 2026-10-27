@@ -234,9 +234,9 @@ func (a *App) handleTOTPDisable(w http.ResponseWriter, r *http.Request) {
 // ---------- informações do modo de operação (admin) ----------
 
 func (a *App) handleInfo(w http.ResponseWriter, r *http.Request) {
-	// Por padrão só a versão vai ao navegador. Detalhes de segurança/rede (modo, CIDRs de proxy,
+	// Por padrão só a versão e a URL pública vão ao navegador. Detalhes de segurança/rede (modo, CIDRs de proxy,
 	// IP visto) só com SHOW_SERVER_INFO=1 e apenas para admin; sempre ficam no log de inicialização.
-	out := map[string]any{"version": version, "showServerInfo": false}
+	out := map[string]any{"version": version, "baseUrl": a.baseURL(r), "showServerInfo": false}
 	if u := currentUser(r); a.showServerInfo && u != nil && u.Role == "admin" {
 		nets := []string{}
 		for _, n := range a.trusted {

@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Teste de fumaça do Painel de Avisos v1.1 (somente stdlib).
+"""Teste de fumaça do Painel de Avisos v1.3.0 (somente stdlib).
 Sobe dois servidores temporários e testa API, SSE, chaves de tela, uploads, proxy reverso,
-cabeçalhos de segurança, SSRF do webhook, 2FA (TOTP) e modo LAN legado.
+cabeçalhos de segurança, SSRF do webhook, 2FA (TOTP), modo LAN legado e download público do instalador Windows.
 
 Uso: python3 tests/smoke_test.py [caminho/do/binario]
 """
-import base64, hashlib, hmac, http.server, json, os, secrets, shutil, socket, sqlite3, struct, subprocess, sys, tempfile, threading, time, urllib.error, urllib.request, zlib
+import base64, re, hashlib, hmac, http.server, json, os, secrets, shutil, socket, sqlite3, struct, subprocess, sys, tempfile, threading, time, urllib.error, urllib.request, zlib
 
 BIN = sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.dirname(__file__), "..", "dist", "painel-avisos-linux-amd64")
 results = []
@@ -39,6 +39,14 @@ class Server:
         self.db = os.path.join(self.dir, "painel.db")
     def stop(self):
         self.p.terminate(); self.p.wait(5); shutil.rmtree(self.dir, ignore_errors=True)
+
+def check_installer(srv):
+    with urllib.request.urlopen(srv.base + "/install/tv-kiosk.ps1", timeout=10) as r:
+        data = r.read()
+        with open(os.path.join(os.path.dirname(__file__), "..", "deploy", "windows", "install-tv-kiosk.ps1"), "rb") as f:
+            source = f.read()
+        check("Instalador público sem sessão: conteúdo idêntico e attachment", r.status == 200 and data == source and r.headers.get("Content-Disposition") == 'attachment; filename="install-tv-kiosk.ps1"')
+        check("Instalador identifica monitores e não contém chave", b"-ListMonitors" in data and re.search(rb"tk_[A-Za-z0-9_-]{20,}", data) is None)
 
 class NoRedirect(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, *a, **k): return None
@@ -151,6 +159,9 @@ try:
     check("Cookie de sessão com Secure + HttpOnly + SameSite=Strict", "Secure" in sc and "HttpOnly" in sc and "SameSite=Strict" in sc, sc.split(";", 1)[1].strip())
     check("HSTS enviado quando X-Forwarded-Proto=https vem do proxy confiável", "max-age" in (h.get("Strict-Transport-Security") or ""), h.get("Strict-Transport-Security"))
     _, _, h = anon.req("GET", "/healthz"); check("Sem X-Forwarded-Proto: sem HSTS", h.get("Strict-Transport-Security") is None)
+    check_installer(P)
+    s, public_info, _ = adm.req("GET", "/api/admin/info")
+    check("URL base pública no info", s == 200 and public_info.get("baseUrl") == "https://avisos.teste.local")
     s, info, _ = adm.req("GET", "/api/admin/info"); sv = info.get("server") or {}
     check("SHOW_SERVER_INFO=1: admin recebe detalhes técnicos", info.get("showServerInfo") is True and info.get("version") and "trustProxy" in sv, f"versão={info.get('version')}")
     check("IP real do cliente lido do X-Forwarded-For (proxy confiável)", sv.get("clientIp") == "203.0.113.50" and sv.get("https") is True, f"clientIp={sv.get('clientIp')} https={sv.get('https')}")
@@ -301,7 +312,8 @@ try:
     section("Modo LAN (compatibilidade)")
     adm = Client(L); adm.login("admin", L.pw)
     s, info, _ = adm.req("GET", "/api/admin/info")
-    check("Padrão (SHOW_SERVER_INFO=0): /api/admin/info só expõe versão — sem modo, proxies, IP ou URL", s == 200 and set(info) == {"version", "showServerInfo"} and info["showServerInfo"] is False, json.dumps(info))
+    check_installer(L)
+    check("Padrão (SHOW_SERVER_INFO=0): /api/admin/info expõe versão e URL base — sem modo, proxies ou IP", s == 200 and set(info) == {"version", "baseUrl", "showServerInfo"} and info["showServerInfo"] is False, json.dumps(info))
     leg = SSE(L, "tv-legado"); leg.start()
     check("Tela legada SEM chave conecta e é cadastrada automaticamente", leg.wait_status() == 200 and any(x["name"] == "tv-legado" for x in adm.req("GET", "/api/admin/screens")[1]))
     s, scr, _ = adm.req("POST", "/api/admin/screens", {"name": "tv-nova"})

@@ -26,7 +26,7 @@ Quadro de comunicados para TVs, administrado pelo navegador. Um único servidor 
 |---|---|---|
 | ![Telas](screenshots/05-admin-telas.png) | ![Configurações](screenshots/08-admin-configuracoes.png) | ![Offline](screenshots/06-tela-offline-service-worker.png) |
 
-Também disponíveis: [tela não autorizada](screenshots/07-tela-nao-autorizada.png) e [detalhes técnicos opcionais](screenshots/09-admin-detalhes-tecnicos-opcional.png).
+Também disponíveis: [instalar na TV (Windows)](screenshots/10-admin-instalar-na-tv.png), [tela não autorizada](screenshots/07-tela-nao-autorizada.png) e [detalhes técnicos opcionais](screenshots/09-admin-detalhes-tecnicos-opcional.png).
 
 ## Como funciona
 
@@ -90,7 +90,7 @@ Todas as variáveis do `.env.example`:
 | `TRAEFIK_NETWORK` | `proxy`: nome da rede Docker externa do Traefik. |
 | `TRAEFIK_ENTRYPOINT` | `websecure`: entrypoint HTTPS existente. |
 | `TRAEFIK_CERTRESOLVER` | `letsencrypt`: resolver ACME existente; adapte as labels se sua instalação usar certificados fornecidos por arquivo. |
-| `TRUST_PROXY` | `172.16.0.0/12,192.168.0.0/16`: exemplo amplo; prefira o CIDR exato da rede do proxy. Só esses endereços podem informar `X-Forwarded-For/Proto`. |
+| `TRUST_PROXY` | `172.16.0.0/12,192.168.0.0/16`: exemplo amplo; prefira o CIDR exato da rede do proxy. Só esses endereços podem informar `X-Forwarded-For/Proto/Host`. |
 | `ALLOW_KEYLESS` | `0`: exige chave das TVs. |
 | `WEBHOOK_ALLOW_PRIVATE` | `0`: impede webhook para redes privadas. |
 | `SHOW_SERVER_INFO` | `0`: oculta detalhes técnicos no painel; `1` exibe para administradores. Os detalhes continuam nos logs. |
@@ -102,7 +102,7 @@ Todas as variáveis do `.env.example`:
 | `BACKUP_RETENTION_DAYS` | `14`: retenção dos arquivos de backup. |
 | `TZ` | `America/Sao_Paulo`: fuso do container. |
 
-`PUBLIC_URL` é uma configuração do servidor, não uma variável interpolada por esse Compose: nele, altere `DOMAIN` para mudar a URL pública. `PAINEL_VERSION` é opcional nos dois Composes e define a tag da imagem local (padrão `1.2.1`); a compilação usa o código presente na pasta.
+`PUBLIC_URL` é uma configuração do servidor, não uma variável interpolada por esse Compose: nele, altere `DOMAIN` para mudar a URL pública. `PAINEL_VERSION` é opcional nos dois Composes e define a tag da imagem local (padrão `1.3.0`); a compilação usa o código presente na pasta.
 
 #### Restringir o painel por IP
 
@@ -181,7 +181,14 @@ Comandos: `serve` (também padrão sem comando), `version`, `reset-admin` e `bac
 
 ### Pelo painel (recomendado)
 
-_(em breve)_
+1. Na aba **Telas**, clique em **Instalar na TV** ao lado da tela desejada.
+2. No PC Windows ligado à TV, abra o PowerShell e copie os comandos do passo 1 para baixar o instalador e identificar os monitores.
+3. Escolha o monitor, se necessário, e o logon automático, se desejar. Cole sua chave ou clique em **Gerar nova chave**.
+4. Copie o comando de instalação ou baixe o instalador configurado `.bat` e execute-o. Para logon automático, execute como administrador.
+
+A chave só aparece quando é gerada: o servidor guarda apenas seu hash. Por isso, o botão permite gerar uma nova; a anterior deixa de funcionar imediatamente e a TV precisa ser reconfigurada. O `.bat` contém a chave: não compartilhe e apague depois de usar.
+
+A URL base vem de `PUBLIC_URL`; quando não configurada, usa os cabeçalhos `X-Forwarded-Proto` e `X-Forwarded-Host` somente se a conexão vier de um proxy listado em `TRUST_PROXY`. Nos demais casos, usa o endereço usado para abrir o painel. O endpoint `/install/tv-kiosk.ps1` é público, funciona sem sessão e não contém segredos.
 
 ### Pelo script
 
@@ -284,7 +291,9 @@ go test ./...
 python3 tests/smoke_test.py dist/painel-avisos-linux-amd64
 ```
 
-Em `tests/`, `browser_test.mjs` usa `puppeteer-core` e Chrome para interface, CSP e offline; `urgent_test.mjs` usa `playwright-core` para o ciclo urgente; `traefik_test.py` exercita o proxy real com Docker. Consulte os cabeçalhos dos scripts para parâmetros e dependências. `kiosk_autostart_test.ps1` e `kiosk_monitor_test.ps1` rodam com `pwsh -NoProfile -File tests/NOME.ps1` e mocks; não substituem validação em Windows real. Os resultados históricos ficam em `tests/results/` e `tests/*_result.txt`. `dist/` é gerado localmente e ignorado pelo Git.
+Os testes Go verificam também a URL base e o instalador público; o smoke confere o download sem sessão nos modos público e LAN.
+
+Em `tests/`, `browser_test.mjs` usa `puppeteer-core` e Chrome para interface, instalação na TV (comando, monitor, logon automático e download `.bat`), CSP e offline; `urgent_test.mjs` usa `playwright-core` para o ciclo urgente; `traefik_test.py` exercita o proxy real com Docker. Consulte os cabeçalhos dos scripts para parâmetros e dependências. `kiosk_autostart_test.ps1` e `kiosk_monitor_test.ps1` rodam com `pwsh -NoProfile -File tests/NOME.ps1` e mocks; não substituem validação em Windows real. Os resultados históricos ficam em `tests/results/` e `tests/*_result.txt`. `dist/` é gerado localmente e ignorado pelo Git.
 
 Histórico de versões: [CHANGELOG.md](CHANGELOG.md).
 

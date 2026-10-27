@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Painel de Avisos — Tela</title>
+<link rel="stylesheet" href="/static/tela.css">
+</head>
+<body class="mode-idle">
+  <!-- Tela ociosa: relógio, data e empresa -->
+  <section id="idle" class="view">
+    <div class="idle-brand"><img id="idle-logo" alt="" hidden><span id="idle-company"></span></div>
+    <div class="idle-clock" id="idle-clock">--:--</div>
+    <div class="idle-date" id="idle-date"></div>
+    <div class="idle-hint" id="idle-hint">Nenhum comunicado no momento</div>
+  </section>
+
+  <!-- Comunicado (normal ou urgente) -->
+  <section id="notice" class="view">
+    <header class="topbar">
+      <div class="brand"><img id="top-logo" alt="" hidden><span id="top-company"></span></div>
+      <div class="top-right"><span id="top-date"></span><span class="top-clock" id="top-clock">--:--</span></div>
+    </header>
+    <div class="card" id="card">
+      <div class="badge" id="badge"><span class="dot"></span><span id="badge-text">COMUNICADO</span></div>
+      <div class="content">
+        <div class="text">
+          <h1 id="title"></h1>
+          <div class="body" id="body"></div>
+        </div>
+        <figure class="image" id="image-wrap" hidden><img id="image" alt=""></figure>
+      </div>
+    </div>
+    <footer class="footer">
+      <div class="meta" id="meta"></div>
+      <div class="pager" id="pager"></div>
+    </footer>
+    <div class="progress"><div class="bar" id="bar"></div></div>
+  </section>
+
+  <section id="denied" class="denied" hidden>
+    <div class="denied-box">
+      <div class="denied-icon">⛔</div>
+      <h1>Tela não autorizada</h1>
+      <p id="denied-msg">O acesso desta TV foi removido ou o endereço está incompleto.</p>
+      <p class="denied-help">Peça ao administrador do painel um novo endereço para esta TV (menu <b>Telas</b>).</p>
+    </div>
+  </section>
+  <div class="conn" id="conn" hidden><span class="spin"></span>reconectando…</div>
+  <div class="sound" id="sound" hidden title="Som bloqueado pelo navegador: clique na tela para liberar">🔇</div>
+<script src="/static/tela.js"></script>
+</body>
+</html>

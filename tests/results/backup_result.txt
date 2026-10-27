@@ -1,0 +1,7 @@
+backup gravado em /data/backup-20261020-163636.db (integridade: ok)
+ painel-avisos copy painel-avisos:/data/backup-20261020-163636.db to /tmp/painel-bkp/painel-20261020-163636.db Copying
+ painel-avisos copy painel-avisos:/data/backup-20261020-163636.db to /tmp/painel-bkp/painel-20261020-163636.db Copied
+/tmp/painel-bkp/painel-20000101-000000.db.gz
+/tmp/painel-bkp/uploads-20000101-000000.tar.gz
+2026-10-20T16:36:37-03:00 backup ok: /tmp/painel-bkp/painel-20261020-163636.db.gz (4.0K) + uploads-20261020-163636.tar.gz
+integrity: ok | telas: 1 | avisos: 9

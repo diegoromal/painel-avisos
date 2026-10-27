@@ -1,0 +1,15 @@
+# Restringe /admin, /api/admin, /api/v1 e o login aos IPs de ADMIN_ALLOWED_IPS (Traefik v3: middleware ipallowlist).
+# /tela, /api/screen, /uploads, /static e /healthz continuam abertos (as telas usam chave própria).
+# Ativar: em .env, COMPOSE_FILE=docker-compose.yml:docker-compose.allowlist-v3.yml
+# Se houver outro proxy/CDN na frente do Traefik, ajuste ipStrategy.depth (veja o README).
+services:
+  painel-avisos:
+    labels:
+      traefik.http.middlewares.painel-admin-ip.ipallowlist.sourcerange: ${ADMIN_ALLOWED_IPS:?defina ADMIN_ALLOWED_IPS no .env}
+      traefik.http.routers.painel-avisos-admin.rule: Host(`${DOMAIN}`) && (PathPrefix(`/admin`) || PathPrefix(`/api/admin`) || PathPrefix(`/api/v1`) || PathPrefix(`/api/login`) || PathPrefix(`/api/logout`) || PathPrefix(`/api/me`))
+      traefik.http.routers.painel-avisos-admin.priority: "100"
+      traefik.http.routers.painel-avisos-admin.entrypoints: ${TRAEFIK_ENTRYPOINT:-websecure}
+      traefik.http.routers.painel-avisos-admin.tls: "true"
+      traefik.http.routers.painel-avisos-admin.tls.certresolver: ${TRAEFIK_CERTRESOLVER:-letsencrypt}
+      traefik.http.routers.painel-avisos-admin.middlewares: painel-admin-ip
+      traefik.http.routers.painel-avisos-admin.service: painel-avisos

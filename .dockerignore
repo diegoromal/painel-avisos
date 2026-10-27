@@ -1,0 +1,5 @@
+data/
+dist/
+screenshots/
+*.zip
+.git

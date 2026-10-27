@@ -1,0 +1,13 @@
+Traefik v2.11 + allowlist-v2, ADMIN_ALLOWED_IPS=10.99.99.99/32 (cliente 172.x fora da lista):
+  /admin                                   403
+  /api/login                               403
+  /api/logout                              403
+  /api/me                                  403
+  /api/admin/info                          403
+  /api/v1/screens                          403
+  /tela?screen=tv-allow                    401
+  /api/screen/state?screen=tv-allow        401
+  /healthz                                 200
+  /static/tela.css                         200
+  /tela-sw.js                              200
+  (401 nas rotas de TV = chegou ao app, que exigiu a chave; 403 = bloqueado pelo Traefik)

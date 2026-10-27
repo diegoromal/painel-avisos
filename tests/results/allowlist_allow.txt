@@ -1,0 +1,11 @@
+ADMIN_ALLOWED_IPS=172.16.0.0/12
+ Container painel-avisos  Started
+  /admin                                   200
+  /api/login                               400
+  /api/admin/info                          401
+  /api/v1/screens                          401
+  /api/me                                  401
+  /tela?screen=tv-allow&key=[REDACTED] 200
+  /api/screen/state?screen=tv-allow&key=[REDACTED] 200
+  /healthz                                 200
+  /static/tela.css                         200

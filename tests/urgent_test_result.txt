@@ -1,0 +1,26 @@
+PASS Padrões novos: intercalar, 60 s, repetir alerta — {"m":"interleave","s":"60","r":"1"}
+PASS A) Sequência: urgente → ciclo de 3 normais → urgente → normais — URGENTE A(60s) → Normal 1(15s) → Normal 2(15s) → Normal 3(15s) → URGENTE A(60s) → Normal 1(15s) → Normal 2(15s) → Normal 3(15s) → URGENTE A(5s)
+PASS A) Urgente fica 60 s e cada normal 15 s — URGENTE A(60s) → Normal 1(15s) → Normal 2(15s) → Normal 3(15s) → URGENTE A(60s)
+PASS A) Visual: vermelho no urgente, normal nos normais
+PASS A) Barra do urgente usa o tempo do urgente (~60 s) — width 59983ms linear
+PASS A) Alerta a cada 10 s durante o urgente (6 + 6), silêncio nos normais — bipes em 0,11,21,31,41,51,106,116,126,136,146,156,211 s
+PASS B) Vários urgentes: um depois do outro (60 s cada), depois os normais, e volta — URGENTE A(60s) → URGENTE B(60s) → Normal 1(15s) → Normal 2(15s) → URGENTE A(15s)
+PASS B) Cada urgente apita no seu período (12 bipes em 120 s) — bipes em 0,11,21,31,41,51,61,71,81,91,101,111,151,161 s
+PASS C) Só urgente: fica direto na tela
+PASS C) Reinicia o tempo/alerta a cada 60 s (bipes 0..50, 60..110, 120) — bipes em 0,11,21,31,41,51,61,71,81,91,101,111,121 s
+PASS D) Fixo: urgente ocupa a TV o tempo todo (150 s)
+PASS D) Fixo: alerta repete só nos primeiros 60 s — bipes em 0,11,21,31,41,51 s
+PASS D) Fixo sem repetição: um bipe só (como antes) — bipes em 0 s
+PASS E) Urgente novo entra na hora (interrompe o normal) — antes: Normal 2
+PASS E) Depois de 60 s volta aos normais do começo do ciclo — Normal 1(15s) → Normal 2(5s) → URGENTE NOVO(60s) → Normal 1(15s) → Normal 2(2s)
+PASS E) Urgente editado entra na hora e apita de novo — bipes 6 → 7
+PASS F) Reabrir no meio do urgente: continua o urgente e não apita do zero — bipes antes 4, logo depois 4
+PASS F) O urgente não reinicia: total ~60 s e 6 bipes — URGENTE A(59s) → Normal 1(15s) → Normal 2(9s) | bipes 0,11,21,31,40,50
+PASS F) Reabrir no meio dos normais: continua no mesmo normal (não pula para o urgente) — Normal 2 → Normal 2
+PASS F) E o urgente volta no fim do ciclo (não é pulado) — URGENTE A(59s) → Normal 1(15s) → Normal 2(15s) → Normal 3(15s) → URGENTE A(20s)
+PASS G) Som desligado no painel: nenhum bipe
+PASS H) Estado da TV traz modo, tempo, repetição e versão — {"m":"fixed","s":45,"r":false,"v":"1.2.1"}
+PASS J) Servidor atualizado (1.2.1-next): a TV recarrega sozinha e continua no mesmo ponto — recargas: 1; antes: Normal 2, depois: Normal 3
+PASS Nenhum erro de JavaScript na TV
+
+RESULTADO: 24/24 verificações OK

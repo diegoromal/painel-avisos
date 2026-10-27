@@ -1,0 +1,74 @@
+PASS Parse do instalador
+PASS LSA compila em C# 5
+PASS Parse lançador Monitor= AllUsers=False
+PASS Perfil e log resolvidos em runtime
+PASS Início e mutex antes de healthz
+PASS Espera periódica, sucesso, timeout e duplicado registrados
+PASS Argumento do perfil usa variável runtime
+PASS Parse lançador Monitor=3 AllUsers=False
+PASS Perfil e log resolvidos em runtime
+PASS Início e mutex antes de healthz
+PASS Espera periódica, sucesso, timeout e duplicado registrados
+PASS Argumento do perfil usa variável runtime
+PASS Parse lançador Monitor=2 AllUsers=True
+PASS Perfil e log resolvidos em runtime
+PASS Início e mutex antes de healthz
+PASS Espera periódica, sucesso, timeout e duplicado registrados
+PASS Argumento do perfil usa variável runtime
+PASS Nome da tarefa isolado por tela
+PASS LogonTrigger e atraso 20s
+PASS Usuário e token interativo
+PASS Privilégios limitados
+PASS Reinício 999 vezes por minuto
+PASS Sem limite de execução
+PASS Bateria e disponibilidade
+PASS IgnoreNew
+PASS Ação e escape XML preservam caminho
+PASS ACL por escopo
+PASS Nome da tarefa isolado por tela
+PASS LogonTrigger e atraso 20s
+PASS Grupo Users sem UserId no gatilho
+PASS Privilégios limitados
+PASS Reinício 999 vezes por minuto
+PASS Sem limite de execução
+PASS Bateria e disponibilidade
+PASS IgnoreNew
+PASS Ação e escape XML preservam caminho
+PASS ACL por escopo
+PASS Combinação inválida rejeitada
+PASS Combinação inválida rejeitada
+PASS Combinação inválida rejeitada
+PASS Combinação inválida rejeitada
+PASS Combinação inválida rejeitada
+PASS Combinação inválida rejeitada
+PASS Combinação inválida rejeitada
+PASS Combinação válida aceita
+PASS Combinação válida aceita
+PASS Combinação válida aceita
+PASS Combinação válida aceita
+PASS Combinação válida aceita
+PASS Combinação válida aceita
+PASS Resultados traduzidos
+PASS AutoLogon sem administrador falha antes de pedir senha
+PASS DisableAutoLogon sem administrador falha
+PASS Senha solicitada como SecureString e nunca exibida
+PASS LSA remove senha clara e configura usuário
+PASS Fallback avisa texto claro sem exibir senha
+Logon automático desativado.
+PASS Disable remove registro e segredo
+PASS Estado real do registro e LSA
+PASS ATENÇÃO e comando quando desativado
+PASS Usuário informado quando ativo
+Tela removida. O logon automático foi mantido; para desativar use -DisableAutoLogon.
+PASS Uninstall encerra só lançador e Edge da tela
+PASS Uninstall encerra o Edge da tela também de outro usuário (perfil em outro LOCALAPPDATA)
+PASS Uninstall remove só tarefa da tela
+PASS Uninstall remove lançador, logs e dois atalhos sem tocar tv-2
+PASS Status mostra tarefa, resultado e processos
+PASS Status lê últimas 20 linhas do log do usuário atual
+PASS Status não remove nem encerra nada
+PASS Consulta LSA sem permissão é diagnosticada sem falhar
+PASS AutoLogon usa usuário atual por padrão
+PASS Registro da tarefa usa XML e Force; início respeita NoStart
+
+RESULTADO: 70/70 verificações OK

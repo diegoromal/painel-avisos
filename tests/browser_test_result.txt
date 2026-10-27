@@ -1,0 +1,28 @@
+PASS Login no painel pelo navegador
+PASS Configurações + upload de logo pela UI (preview carregou com a sessão)
+PASS Padrão: Configurações sem 'Detalhes técnicos' e /api/admin/info só com a versão — {"showServerInfo":false,"version":"1.2.1"}
+PASS Criar tela pela UI mostra a chave uma vez — tk_LDJI…
+PASS Nenhum jargão técnico visível nas abas do admin (padrão) — 19 termos verificados em 6 abas
+PASS QR code do 2FA (data: URL) renderiza sob a CSP
+PASS Logo protegido carrega na TV (URL com chave)
+PASS Aviso publicado pela UI aparece na TV — 80 ms (inclui o clique)
+PASS Imagem do aviso carrega na TV via chave
+PASS Rodízio: 2 avisos normais trocam sozinhos no tempo configurado (5 s) — 2604 ms
+PASS Rodízio continua mesmo com a página reaberta a cada 3 s — ["Manutenção do ar-condicionado","Reunião geral hoje às 15h"]
+PASS TV entra em modo URGENTE — 67 ms
+PASS Áudio do alerta liberado (flag de autoplay)
+PASS Urgente intercalado (tempo real): urgente → avisos normais → urgente de novo — mode-urgent → mode-normal → mode-urgent → mode-normal
+PASS Service worker ativo e com a tela em cache — {"ks":["painel-tela-v5"],"n":6}
+PASS SERVIDOR DESLIGADO: nova aba abre a tela pelo cache e mostra o último aviso — Reunião geral hoje às 15h
+PASS Indicador 'reconectando…' visível offline
+PASS Chave revogada com a TV aberta: TV mostra 'Tela não autorizada' — 5 ms
+PASS Revogação apaga o estado local e o cache offline da TV — {"ls":0,"caches":0}
+PASS Recarregar com chave revogada → HTTP 403 + página 'Tela não autorizada' — HTTP 403
+PASS Chave revogada + servidor desligado: NÃO abre conteúdo do cache
+PASS Chave errada → 403 'Tela não autorizada'
+PASS SHOW_SERVER_INFO=1: admin vê 'Detalhes técnicos' recolhido, com modo/proxies/IP — Versão 1.2.1
+PASS Controle: script inline injetado é bloqueado pela CSP e detectado
+PASS Nenhuma violação de CSP no console (admin, TV, offline, negada)
+PASS Nenhum erro de JavaScript nas páginas
+
+RESULTADO: 26/26 verificações OK

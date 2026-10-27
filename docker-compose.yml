@@ -1,0 +1,23 @@
+services:
+  painel-avisos:
+    build: .
+    image: painel-avisos:1.0.0
+    container_name: painel-avisos
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      TZ: America/Sao_Paulo
+      # Senha inicial do admin (só vale no PRIMEIRO start). Se vazio, é gerada e
+      # aparece em: docker compose logs painel-avisos
+      PAINEL_ADMIN_PASSWORD: ""
+      # PAINEL_WEBHOOK_URL: "http://servidor-interno/webhook"
+      # Modo LAN: telas sem chave aceitas (legado) e webhook para IPs privados permitidos (auto).
+      # PAINEL_ALLOW_KEYLESS: "0"      # exigir chave em todas as telas (recomendado)
+      # PAINEL_SHOW_SERVER_INFO: "1"   # mostrar "Detalhes técnicos" em Configurações (só admin)
+      # Publicação na internet atrás do Traefik: use deploy/traefik/docker-compose.yml
+    volumes:
+      - painel-data:/data
+
+volumes:
+  painel-data:

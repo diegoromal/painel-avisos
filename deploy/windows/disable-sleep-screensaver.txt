@@ -1,0 +1,14 @@
+PC DA TV — DEIXAR SEMPRE LIGADO (o install-tv-kiosk.ps1 já faz os itens 1 e 2)
+
+1) Energia (prompt como Administrador):
+     powercfg /change monitor-timeout-ac 0
+     powercfg /change standby-timeout-ac 0
+     powercfg /change hibernate-timeout-ac 0
+2) Proteção de tela: Configurações > Personalização > Tela de bloqueio > Proteção de tela = (Nenhuma)
+   ou: reg add "HKCU\Control Panel\Desktop" /v ScreenSaveActive /t REG_SZ /d 0 /f
+3) Logon automático do usuário da TV: Win+R > netplwiz (desmarcar "Os usuários devem digitar...")
+   ou Sysinternals Autologon (guarda a senha criptografada no LSA).
+4) Windows Update: Configurações > Windows Update > Horário ativo (ex.: 06h-23h) para não reiniciar no expediente.
+5) BIOS/UEFI: "Restore on AC Power Loss" = Power On (volta sozinho após queda de energia).
+6) TV: desative "desligamento automático"/"economia de energia" no menu da própria TV e use a entrada HDMI fixa.
+7) Notificações: Configurações > Sistema > Notificações = desativado (evita pop-ups sobre o quiosque).

@@ -1,0 +1,4 @@
+PASS SSE via Traefik: estado inicial chega (sem buffering) — Content-Type=text/event-stream Content-Encoding=None
+PASS SSE não é comprimido mesmo com Accept-Encoding: gzip
+PASS Aviso chega pela SSE através do Traefik em < 1 s (3 amostras) — 5 ms, 5 ms, 3 ms
+RESULTADO: 9/9 verificações OK

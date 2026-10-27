@@ -1,0 +1,5 @@
+install-leader-shortcut.ps1: 0 erros
+install-server.ps1: 0 erros
+install-tv-kiosk.ps1: 0 erros
+uninstall-server.ps1: 0 erros
+tests/kiosk_*_test.ps1: parse via suites; pwsh 7.4.6

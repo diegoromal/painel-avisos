@@ -1,0 +1,11 @@
+PASS GET /healthz via Traefik (HTTPS) — {"ok": true, "version": "1.1.0"}
+PASS HSTS presente (X-Forwarded-Proto do Traefik reconhecido) — max-age=31536000
+PASS CSP presente
+PASS Login via Traefik + cookie Secure — Path=/; Max-Age=43200; HttpOnly; Secure; SameSite=Strict
+PASS Servidor enxerga HTTPS e o IP do cliente via X-Forwarded-For do Traefik — clientIp=172.18.0.1
+PASS /tela sem chave via Traefik → 401
+PASS SSE via Traefik: estado inicial chega (sem buffering) — Content-Type=text/event-stream Content-Encoding=None
+PASS SSE não é comprimido mesmo com Accept-Encoding: gzip
+PASS Aviso chega pela SSE através do Traefik em < 1 s (3 amostras) — 6 ms, 4 ms, 4 ms
+
+RESULTADO: 9/9 verificações OK

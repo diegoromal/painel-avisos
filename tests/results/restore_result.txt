@@ -1,0 +1,10 @@
+ Container painel-avisos  Starting
+ Container painel-avisos  Started
+restaurado de /tmp/painel-bkp/painel-20261020-163636.db.gz
+health=starting
+total 108
+-rw-r--r--    1 10001    10001         3601 Oct 20 16:36 painel-avisos.log
+-rw-r--r--    1 10001    10001        69632 Oct 20 16:36 painel.db
+-rw-r--r--    1 10001    10001        32768 Oct 20 16:36 painel.db-shm
+-rw-r--r--    1 10001    10001            0 Oct 20 16:36 painel.db-wal
+health após restore: healthy; /healthz via Traefik: OK

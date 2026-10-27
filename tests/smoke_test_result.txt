@@ -1,0 +1,89 @@
+
+## Autenticação, cookie Secure, HSTS e proxy reverso
+PASS API admin sem login → 401 — HTTP 401
+PASS Senha errada → 401
+PASS Login correto atrás do proxy
+PASS Cookie de sessão com Secure + HttpOnly + SameSite=Strict — Path=/; Max-Age=43200; HttpOnly; Secure; SameSite=Strict
+PASS HSTS enviado quando X-Forwarded-Proto=https vem do proxy confiável — max-age=31536000
+PASS Sem X-Forwarded-Proto: sem HSTS
+PASS SHOW_SERVER_INFO=1: admin recebe detalhes técnicos — versão=1.2.1
+PASS IP real do cliente lido do X-Forwarded-For (proxy confiável) — clientIp=203.0.113.50 https=True
+PASS Modo público: telas sem chave bloqueadas e webhook sem redes privadas
+PASS Auditoria registra o IP real do login
+PASS POST sem cabeçalho anti-CSRF → 403
+
+## Cabeçalhos de segurança
+PASS CSP estrita + XFO DENY + nosniff + Referrer/Permissions-Policy em /admin
+PASS CSP estrita + XFO DENY + nosniff + Referrer/Permissions-Policy em /tela?screen=x&key=y
+PASS CSP estrita + XFO DENY + nosniff + Referrer/Permissions-Policy em /healthz
+PASS CSP estrita + XFO DENY + nosniff + Referrer/Permissions-Policy em /static/admin.js
+
+## Chaves por tela
+PASS Criar tela devolve chave uma única vez — tk_S6HL…
+PASS Banco guarda só o hash SHA-256 da chave
+PASS Listagem não expõe a chave (só prefixo)
+PASS sem chave: state/heartbeat/events/tela → 401 — 401/401/401/401
+PASS chave errada: state/heartbeat/events/tela → 403 — 403/403/403/403
+PASS chave de outra tela: state/heartbeat/events/tela → 403 — 403/403/403/403
+PASS /tela com chave válida → 200 (página da TV)
+PASS Heartbeat aceita a chave no cabeçalho X-Screen-Key
+PASS Modo público: tela desconhecida sem chave é recusada e NÃO é cadastrada — HTTP 401
+
+## Tempo real (SSE) com chave
+PASS SSE com chave válida conecta
+PASS Aviso normal chega à TV em < 1 s — 2 ms
+PASS Aviso URGENTE chega em < 1 s e vem primeiro — 2 ms
+PASS Aviso segmentado: chega na tela alvo e não na outra
+PASS Agendado: servidor empurra no horário de início — 204 ms após o início
+PASS Expiração: servidor empurra estado sem o aviso — 203 ms após o fim
+PASS Encerrar remove o aviso da TV em < 1 s
+
+## Uploads protegidos
+PASS Upload de imagem (sessão)
+PASS GET /uploads (anônimo) → 401 — HTTP 401
+PASS GET /uploads (sessão logada) → 200 — HTTP 200
+PASS GET /uploads (chave de tela válida) → 200 — HTTP 200
+PASS GET /uploads (chave inválida) → 403 — HTTP 403
+PASS GET /uploads (screen sem chave) → 401 — HTTP 401
+PASS Upload de não-imagem recusado
+
+## Regenerar e revogar chave
+PASS Nova chave derruba na hora a conexão SSE com a chave antiga — 1 ms
+PASS Chave antiga → 403 / nova → 200
+PASS Chave antiga também perde acesso às imagens
+PASS Chave revogada: conexão derrubada e tela rejeitada com/sem chave — com chave=403 sem chave=401
+
+## Webhook: proteção contra SSRF (modo público)
+PASS 15 destinos internos/metadados/esquemas inválidos recusados ao salvar — todos 400
+PASS Checagem no momento da conexão: webhook já gravado apontando p/ loopback é bloqueado e nada é entregue — endereço bloqueado por segurança: ele aponta para uma rede interna ou reservada
+
+## 2FA (TOTP)
+PASS SHOW_SERVER_INFO=1: líder (não admin) NÃO recebe detalhes técnicos — {"showServerInfo": false, "version": "1.2.1"}
+PASS Setup 2FA devolve segredo, URI otpauth e QR (PNG)
+PASS Código errado não ativa o 2FA
+PASS Código correto ativa o 2FA
+PASS Login só com senha → 401 pedindo código
+PASS Código errado → 401
+PASS Senha + código correto → 200
+PASS Mesmo código reutilizado → recusado (anti-replay)
+PASS Admin reseta o 2FA (recuperação) → login volta a ser só com senha
+PASS Líder não acessa gestão de usuários (403)
+
+## Rate limit usa o IP real (X-Forwarded-For)
+PASS IP atacante bloqueado (429) sem bloquear outro IP atrás do mesmo proxy (200) — 429/200
+
+## API com token
+PASS POST /api/v1/announcements com Bearer → 201
+PASS Sem token → 401
+PASS Senhas em bcrypt e tokens só como hash
+
+## Modo LAN (compatibilidade)
+PASS Padrão (SHOW_SERVER_INFO=0): /api/admin/info só expõe versão — sem modo, proxies, IP ou URL — {"showServerInfo": false, "version": "1.2.1"}
+PASS Tela legada SEM chave conecta e é cadastrada automaticamente
+PASS Tela COM chave exige a chave mesmo no modo LAN
+PASS Sem TRUST_PROXY: X-Forwarded-For/Proto forjados são ignorados (IP=127.0.0.1, sem HSTS, cookie sem Secure) — IP auditado=127.0.0.1
+PASS Modo LAN: webhook para IP privado (172.30.0.2) permitido e entregue
+PASS Modo LAN: loopback continua bloqueado
+PASS Webhook screen_offline disparado para tela sem sinal — {"event": "screen_offline", "label": "tv-nova", "lastSeen": "2026-10-27T12:30:17-03:00", "offlineSeconds": 215, "screen": "tv-nova", "source": "painel-avisos"}
+
+RESULTADO: 65/65 verificações OK

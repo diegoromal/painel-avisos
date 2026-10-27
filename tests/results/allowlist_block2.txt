@@ -1,0 +1,4 @@
+ Container painel-avisos  Started
+  /admin                                   403
+  /tela?screen=tv-allow&key=<chave>        200
+  /api/screen/state?screen=tv-allow&key=<chave> 200

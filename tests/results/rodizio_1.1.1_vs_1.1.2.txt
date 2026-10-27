@@ -1,0 +1,213 @@
+Reprodução do bug do rodízio (Chrome headless 1920x1080, PUBLIC_URL=https + TRUST_PROXY, tela com chave tk_), 21/10/2026.
+Cenário: 2 avisos NORMAIS. A página da TV é reaberta periodicamente, como acontece quando o lançador do quiosque
+reabre o Edge em loop (o msedge.exe lançado sai em ~50 ms ao entregar a URL a um Edge já aberto com o mesmo perfil).
+
+===== before_reload15 (before = v1.1.1, after = v1.1.2)
+0s mode-normal "Aviso A" bar=0px
+1s mode-normal "Aviso A" bar=124.047px
+2s mode-normal "Aviso A" bar=254.531px
+3s mode-normal "Aviso A" bar=382.891px
+4s mode-normal "Aviso A" bar=511.234px
+5s mode-normal "Aviso A" bar=639.578px
+6s mode-normal "Aviso A" bar=767.922px
+   >>> página reaberta (relaunch do Edge)
+7s mode-normal "Aviso A" bar=0px
+8s mode-normal "Aviso A" bar=125.859px
+9s mode-normal "Aviso A" bar=256px
+10s mode-normal "Aviso A" bar=384.016px
+11s mode-normal "Aviso A" bar=512px
+12s mode-normal "Aviso A" bar=640.016px
+   >>> página reaberta (relaunch do Edge)
+13s mode-normal "Aviso A" bar=0px
+14s mode-normal "Aviso A" bar=128px
+15s mode-normal "Aviso A" bar=256.016px
+16s mode-normal "Aviso A" bar=384.031px
+17s mode-normal "Aviso A" bar=514.188px
+18s mode-normal "Aviso A" bar=642.188px
+   >>> página reaberta (relaunch do Edge)
+19s mode-normal "Aviso A" bar=0px
+20s mode-normal "Aviso A" bar=125.875px
+21s mode-normal "Aviso A" bar=253.859px
+22s mode-normal "Aviso A" bar=381.875px
+23s mode-normal "Aviso A" bar=512px
+24s mode-normal "Aviso A" bar=640.016px
+   >>> página reaberta (relaunch do Edge)
+25s mode-normal "Aviso A" bar=0px
+26s mode-normal "Aviso A" bar=128px
+27s mode-normal "Aviso A" bar=255.984px
+28s mode-normal "Aviso A" bar=384px
+29s mode-normal "Aviso A" bar=512px
+30s mode-normal "Aviso A" bar=640.016px
+   >>> página reaberta (relaunch do Edge)
+31s mode-normal "Aviso A" bar=0px
+32s mode-normal "Aviso A" bar=128px
+33s mode-normal "Aviso A" bar=256px
+34s mode-normal "Aviso A" bar=384px
+35s mode-normal "Aviso A" bar=512px
+36s mode-normal "Aviso A" bar=642.141px
+   >>> página reaberta (relaunch do Edge)
+37s mode-normal "Aviso A" bar=0px
+38s mode-normal "Aviso A" bar=125.859px
+39s mode-normal "Aviso A" bar=253.859px
+40s mode-normal "Aviso A" bar=381.875px
+41s mode-normal "Aviso A" bar=512px
+42s mode-normal "Aviso A" bar=640px
+   >>> página reaberta (relaunch do Edge)
+43s mode-normal "Aviso A" bar=0px
+44s mode-normal "Aviso A" bar=128px
+45s mode-normal "Aviso A" bar=256px
+46s mode-normal "Aviso A" bar=384.031px
+SCEN=2normal ROT=5 titles=["Aviso A"] ROTATED=false
+console/page errors: none
+
+===== after_reload15 (before = v1.1.1, after = v1.1.2)
+0s mode-normal "Aviso A" bar=0px
+1s mode-normal "Aviso A" bar=124.109px
+2s mode-normal "Aviso A" bar=252.531px
+3s mode-normal "Aviso A" bar=380.922px
+4s mode-normal "Aviso A" bar=509.328px
+5s mode-normal "Aviso A" bar=637.719px
+6s mode-normal "Aviso A" bar=768.266px
+   >>> página reaberta (relaunch do Edge)
+7s mode-normal "Aviso A" bar=0px
+8s mode-normal "Aviso A" bar=239px
+9s mode-normal "Aviso A" bar=486.109px
+10s mode-normal "Aviso A" bar=729.156px
+11s mode-normal "Aviso A" bar=972.219px
+12s mode-normal "Aviso A" bar=1215.25px
+   >>> página reaberta (relaunch do Edge)
+13s mode-normal "Aviso A" bar=0px
+14s mode-normal "Aviso A" bar=1030.83px
+15s mode-normal "Aviso B" bar=0px
+16s mode-normal "Aviso B" bar=128.016px
+17s mode-normal "Aviso B" bar=256.016px
+18s mode-normal "Aviso B" bar=384.062px
+   >>> página reaberta (relaunch do Edge)
+19s mode-normal "Aviso B" bar=0px
+20s mode-normal "Aviso B" bar=175.391px
+21s mode-normal "Aviso B" bar=350.797px
+22s mode-normal "Aviso B" bar=526.219px
+23s mode-normal "Aviso B" bar=701.625px
+24s mode-normal "Aviso B" bar=877.031px
+   >>> página reaberta (relaunch do Edge)
+25s mode-normal "Aviso B" bar=0px
+26s mode-normal "Aviso B" bar=385.328px
+27s mode-normal "Aviso B" bar=777.203px
+28s mode-normal "Aviso B" bar=1175.55px
+29s mode-normal "Aviso B" bar=1567.47px
+30s mode-normal "Aviso A" bar=2.125px
+   >>> página reaberta (relaunch do Edge)
+31s mode-normal "Aviso A" bar=0px
+32s mode-normal "Aviso A" bar=137.672px
+33s mode-normal "Aviso A" bar=275.359px
+34s mode-normal "Aviso A" bar=413.031px
+35s mode-normal "Aviso A" bar=553.016px
+36s mode-normal "Aviso A" bar=690.688px
+   >>> página reaberta (relaunch do Edge)
+37s mode-normal "Aviso A" bar=0px
+38s mode-normal "Aviso A" bar=239.797px
+39s mode-normal "Aviso A" bar=483.688px
+40s mode-normal "Aviso A" bar=731.625px
+41s mode-normal "Aviso A" bar=975.484px
+42s mode-normal "Aviso A" bar=1219.36px
+   >>> página reaberta (relaunch do Edge)
+43s mode-normal "Aviso A" bar=0px
+44s mode-normal "Aviso A" bar=1037.94px
+45s mode-normal "Aviso B" bar=0px
+46s mode-normal "Aviso B" bar=130.125px
+SCEN=2normal ROT=5 titles=["Aviso A","Aviso B"] ROTATED=true
+console/page errors: none
+
+===== before_reload5 (before = v1.1.1, after = v1.1.2)
+0s mode-normal "Aviso A" bar=0px
+1s mode-normal "Aviso A" bar=381.844px
+2s mode-normal "Aviso A" bar=770.188px
+3s mode-normal "Aviso A" bar=1158.5px
+   >>> página reaberta (relaunch do Edge)
+4s mode-normal "Aviso A" bar=0px
+5s mode-normal "Aviso A" bar=377.719px
+6s mode-normal "Aviso A" bar=768.25px
+   >>> página reaberta (relaunch do Edge)
+7s mode-normal "Aviso A" bar=0px
+8s mode-normal "Aviso A" bar=377.703px
+9s mode-normal "Aviso A" bar=761.859px
+   >>> página reaberta (relaunch do Edge)
+10s mode-normal "Aviso A" bar=0px
+11s mode-normal "Aviso A" bar=377.641px
+12s mode-normal "Aviso A" bar=761.719px
+   >>> página reaberta (relaunch do Edge)
+13s mode-normal "Aviso A" bar=0px
+14s mode-normal "Aviso A" bar=384.031px
+15s mode-normal "Aviso A" bar=768.109px
+   >>> página reaberta (relaunch do Edge)
+16s mode-normal "Aviso A" bar=0px
+17s mode-normal "Aviso A" bar=377.641px
+18s mode-normal "Aviso A" bar=761.688px
+   >>> página reaberta (relaunch do Edge)
+19s mode-normal "Aviso A" bar=0px
+20s mode-normal "Aviso A" bar=384.031px
+21s mode-normal "Aviso A" bar=768.109px
+   >>> página reaberta (relaunch do Edge)
+22s mode-normal "Aviso A" bar=0px
+23s mode-normal "Aviso A" bar=384.047px
+24s mode-normal "Aviso A" bar=768.094px
+   >>> página reaberta (relaunch do Edge)
+SCEN=2normal ROT=5 titles=["Aviso A"] ROTATED=false
+console/page errors: none
+
+===== after_reload5 (before = v1.1.1, after = v1.1.2)
+0s mode-normal "Aviso A" bar=0px
+1s mode-normal "Aviso A" bar=381.016px
+2s mode-normal "Aviso A" bar=768.484px
+3s mode-normal "Aviso A" bar=1155.97px
+   >>> página reaberta (relaunch do Edge)
+4s mode-normal "Aviso A" bar=0px
+5s mode-normal "Aviso B" bar=0px
+6s mode-normal "Aviso B" bar=384.047px
+   >>> página reaberta (relaunch do Edge)
+7s mode-normal "Aviso B" bar=0px
+8s mode-normal "Aviso B" bar=651.484px
+9s mode-normal "Aviso B" bar=1302.92px
+   >>> página reaberta (relaunch do Edge)
+10s mode-normal "Aviso A" bar=0px
+11s mode-normal "Aviso A" bar=388.5px
+12s mode-normal "Aviso A" bar=777.062px
+   >>> página reaberta (relaunch do Edge)
+13s mode-normal "Aviso A" bar=0px
+14s mode-normal "Aviso A" bar=1022.95px
+15s mode-normal "Aviso B" bar=0px
+   >>> página reaberta (relaunch do Edge)
+16s mode-normal "Aviso B" bar=0px
+17s mode-normal "Aviso B" bar=486.312px
+18s mode-normal "Aviso B" bar=972.719px
+   >>> página reaberta (relaunch do Edge)
+19s mode-normal "Aviso B" bar=0px
+20s mode-normal "Aviso A" bar=6.39062px
+21s mode-normal "Aviso A" bar=390.469px
+   >>> página reaberta (relaunch do Edge)
+22s mode-normal "Aviso A" bar=0px
+23s mode-normal "Aviso A" bar=640.344px
+24s mode-normal "Aviso A" bar=1291.59px
+   >>> página reaberta (relaunch do Edge)
+SCEN=2normal ROT=5 titles=["Aviso A","Aviso B"] ROTATED=true
+console/page errors: none
+
+===== Controle sem reabertura (v1.1.1 e v1.1.2 trocam normalmente)
+SCEN=2normal ROT=5 titles=["Aviso A","Aviso B"] ROTATED=true
+SCEN=3normal ROT=5 titles=["Aviso A","Aviso B","Aviso C"] ROTATED=true
+SCEN=endsAt ROT=5 titles=["Aviso A","Aviso B"] ROTATED=true
+SCEN=2normal ROT=5 titles=["Aviso A","Aviso B"] ROTATED=true
+SCEN=2normal ROT=5 titles=["Aviso A","Aviso B"] ROTATED=true
+SCEN=sched ROT=5 titles=["Aviso A","Aviso B"] ROTATED=true
+SCEN=urg+normal ROT=5 titles=["URG"] ROTATED=false
+
+===== Atualização do service worker (TV aberta na 1.1.1, servidor trocado para 1.1.2)
+v1.1.1 rodando, TV aberta: {"controlled":true,"caches":["painel-tela-v3"],"newJs":false} version 1.1.1
+container atualizado p/ 1.1.2
+página antiga ainda aberta (sem recarregar) — JS em memória continua o antigo até recarregar
+depois de reabrir a página 1x: {"controlled":true,"caches":["painel-tela-v4"],"newJs":true} cache v4 tem tela.js novo: true
+rodízio após upgrade: ["Aviso A","Aviso B"]
+
+===== Chromium: 2ª execução com o mesmo --user-data-dir sai na hora e abre outra aba
+2a instancia 1: saiu em 47 ms, codigo 0
+2a instancia 2: saiu em 49 ms, codigo 0

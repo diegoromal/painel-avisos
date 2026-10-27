@@ -1,0 +1,8 @@
+Upgrade 1.1.0 -> 1.1.1 via 'unzip -o' + 'docker compose up -d --build' (volume painel-avisos_painel-data)
+ healthz: {'ok': True, 'version': '1.1.1'}
+ login admin com a senha da 1.1.0: 200
+ telas: [('tv-upgrade', True)]
+ TV com a chave antiga (gerada na 1.1.0): 200 ['Aviso criado na 1.1.0']
+ usuários: ['admin', 'lider.up']
+ /api/admin/info (SHOW_SERVER_INFO=0): {'showServerInfo': False, 'version': '1.1.1'}
+ TV sem chave após upgrade: 401

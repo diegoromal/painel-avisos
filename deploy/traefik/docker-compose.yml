@@ -1,0 +1,63 @@
+# Painel de Avisos atrás de um Traefik já existente (v2 ou v3).
+# Uso: cp .env.example .env && editar .env && docker compose up -d --build
+name: painel-avisos
+
+services:
+  painel-avisos:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    image: painel-avisos:${PAINEL_VERSION:-1.2.1}
+    container_name: painel-avisos
+    restart: unless-stopped
+    environment:
+      TZ: ${TZ:-America/Sao_Paulo}
+      PAINEL_BIND: 0.0.0.0            # escuta em todas as interfaces DENTRO do container
+      PAINEL_PORT: "8080"
+      PAINEL_DATA: /data
+      PAINEL_PUBLIC_URL: https://${DOMAIN:?defina DOMAIN no .env}
+      PAINEL_TRUST_PROXY: ${TRUST_PROXY:-172.16.0.0/12,192.168.0.0/16}
+      PAINEL_ALLOW_KEYLESS: ${ALLOW_KEYLESS:-0}
+      PAINEL_WEBHOOK_ALLOW_PRIVATE: ${WEBHOOK_ALLOW_PRIVATE:-0}
+      # 1 = mostra "Detalhes técnicos" (modo, proxies, IP visto) em Configurações, só para admin. Padrão 0.
+      PAINEL_SHOW_SERVER_INFO: ${SHOW_SERVER_INFO:-0}
+      PAINEL_WEBHOOK_URL: ${WEBHOOK_URL:-}
+      PAINEL_ADMIN_PASSWORD: ${ADMIN_INITIAL_PASSWORD:-}
+    volumes:
+      - painel-data:/data
+    networks:
+      - traefik
+    # Sem "ports:" de propósito: o container NÃO fica exposto na VM; só o Traefik o alcança pela rede.
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: ${TRAEFIK_NETWORK:-proxy}
+      traefik.http.routers.painel-avisos.rule: Host(`${DOMAIN}`)
+      traefik.http.routers.painel-avisos.entrypoints: ${TRAEFIK_ENTRYPOINT:-websecure}
+      traefik.http.routers.painel-avisos.tls: "true"
+      traefik.http.routers.painel-avisos.tls.certresolver: ${TRAEFIK_CERTRESOLVER:-letsencrypt}
+      traefik.http.routers.painel-avisos.service: painel-avisos
+      traefik.http.services.painel-avisos.loadbalancer.server.port: "8080"
+      # SSE (tempo real): NÃO adicione o middleware "compress" neste router. Se o entrypoint tiver
+      # compress global, use excludedContentTypes=text/event-stream. Não é preciso mudar flushInterval:
+      # o Traefik repassa text/event-stream imediatamente (testado com Traefik v3.5).
+      #
+      # --- Restringir o painel administrativo por IP (opcional) ---------------------------------
+      # Mais simples: em .env, COMPOSE_FILE=docker-compose.yml:docker-compose.allowlist-v3.yml
+      # (ou -v2.yml) e ADMIN_ALLOWED_IPS=200.1.2.3/32,10.60.0.0/16. Equivalente em labels:
+      # traefik.http.middlewares.painel-admin-ip.ipallowlist.sourcerange: ${ADMIN_ALLOWED_IPS}   # Traefik v3
+      # traefik.http.middlewares.painel-admin-ip.ipwhitelist.sourcerange: ${ADMIN_ALLOWED_IPS}   # Traefik v2
+      # traefik.http.routers.painel-avisos-admin.rule: Host(`${DOMAIN}`) && (PathPrefix(`/admin`) || PathPrefix(`/api/admin`) || PathPrefix(`/api/v1`) || PathPrefix(`/api/login`) || PathPrefix(`/api/logout`) || PathPrefix(`/api/me`))
+      # traefik.http.routers.painel-avisos-admin.priority: "100"
+      # traefik.http.routers.painel-avisos-admin.entrypoints: ${TRAEFIK_ENTRYPOINT:-websecure}
+      # traefik.http.routers.painel-avisos-admin.tls: "true"
+      # traefik.http.routers.painel-avisos-admin.tls.certresolver: ${TRAEFIK_CERTRESOLVER:-letsencrypt}
+      # traefik.http.routers.painel-avisos-admin.middlewares: painel-admin-ip
+      # traefik.http.routers.painel-avisos-admin.service: painel-avisos
+
+volumes:
+  painel-data:
+
+networks:
+  traefik:
+    external: true
+    name: ${TRAEFIK_NETWORK:-proxy}

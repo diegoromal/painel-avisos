@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Painel de Avisos — Administração</title>
+<link rel="stylesheet" href="/static/admin.css">
+</head>
+<body>
+<!-- Login -->
+<div id="login" class="login" hidden>
+  <form class="login-card" id="login-form">
+    <div class="logo-mark">📢</div>
+    <h1>Painel de Avisos</h1>
+    <p class="muted">Entre para publicar comunicados nas telas.</p>
+    <label>Usuário<input name="username" autocomplete="username" required autofocus></label>
+    <label>Senha<input name="password" type="password" autocomplete="current-password" required></label>
+    <label id="code-row" hidden>Código do aplicativo autenticador<input name="code" inputmode="numeric" pattern="[0-9 ]*" maxlength="7" autocomplete="one-time-code" placeholder="000000"></label>
+    <div class="error" id="login-error"></div>
+    <button class="btn primary big" type="submit">Entrar</button>
+  </form>
+</div>
+
+<!-- App -->
+<div id="app" hidden>
+  <header class="top">
+    <div class="brand">📢 <b>Painel de Avisos</b></div>
+    <nav id="tabs">
+      <a data-tab="avisos" class="on">Avisos</a>
+      <a data-tab="telas">Telas</a>
+      <a data-tab="usuarios" data-admin>Usuários</a>
+      <a data-tab="config" data-admin>Configurações</a>
+      <a data-tab="api" data-admin>Integrações</a>
+      <a data-tab="conta">Minha conta</a>
+    </nav>
+    <div class="who"><span id="who"></span><button class="btn ghost sm" id="logout">Sair</button></div>
+  </header>
+
+  <main>
+    <!-- AVISOS -->
+    <section data-pane="avisos" class="grid2">
+      <div class="panel">
+        <h2 id="form-title">Novo comunicado</h2>
+        <form id="ann-form">
+          <input type="hidden" name="id">
+          <label>Título<input name="title" maxlength="120" required placeholder="Ex.: Reunião geral às 15h"></label>
+          <label>Texto
+            <div class="toolbar">
+              <button type="button" data-fmt="**" title="Negrito"><b>N</b></button>
+              <button type="button" data-fmt="*" title="Itálico"><i>I</i></button>
+              <button type="button" data-fmt="__" title="Sublinhado"><u>S</u></button>
+              <button type="button" data-fmt="- " title="Lista">• Lista</button>
+              <span class="muted small">**negrito** · *itálico* · __sublinhado__ · linhas com "- " viram lista</span>
+            </div>
+            <textarea name="body" rows="6" maxlength="3000" placeholder="Detalhes do comunicado…"></textarea>
+          </label>
+          <div class="row">
+            <fieldset class="prio">
+              <legend>Prioridade</legend>
+              <label class="radio"><input type="radio" name="priority" value="normal" checked> Normal <span class="muted small">(entra no rodízio)</span></label>
+              <label class="radio urgent"><input type="radio" name="priority" value="urgent"> Urgente <span class="muted small">(toma a tela + som)</span></label>
+            </fieldset>
+          </div>
+          <div class="row two">
+            <label>Início <span class="muted small">(vazio = agora)</span><input type="datetime-local" name="startsAt"></label>
+            <label>Fim <span class="muted small">(vazio = até encerrar)</span><input type="datetime-local" name="endsAt"></label>
+          </div>
+          <div class="quick">Duração rápida:
+            <button type="button" data-dur="60">1 h</button><button type="button" data-dur="240">4 h</button>
+            <button type="button" data-dur="eod">até o fim do dia</button><button type="button" data-dur="10080">1 semana</button>
+            <button type="button" data-dur="none">sem fim</button>
+          </div>
+          <fieldset>
+            <legend>Telas</legend>
+            <label class="radio"><input type="checkbox" name="allScreens" checked> Todas as telas</label>
+            <div id="screen-checks" class="checks"></div>
+          </fieldset>
+          <fieldset>
+            <legend>Imagem (opcional)</legend>
+            <input type="hidden" name="image">
+            <div class="img-row"><input type="file" id="img-file" accept="image/png,image/jpeg,image/gif,image/webp">
+              <img id="img-preview" hidden alt=""><button type="button" class="btn ghost sm" id="img-clear" hidden>Remover</button></div>
+          </fieldset>
+          <div class="error" id="form-error"></div>
+          <div class="actions">
+            <button class="btn primary big" type="submit" id="submit-btn">Publicar agora</button>
+            <button class="btn ghost" type="button" id="cancel-edit" hidden>Cancelar edição</button>
+          </div>
+        </form>
+      </div>
+      <div class="panel">
+        <div class="subtabs" id="views">
+          <a data-view="active" class="on">Ativos <span class="count" id="c-active"></span></a>
+          <a data-view="scheduled">Agendados <span class="count" id="c-scheduled"></span></a>
+          <a data-view="history">Histórico</a>
+        </div>
+        <div id="ann-list" class="list"></div>
+      </div>
+    </section>
+
+    <!-- TELAS -->
+    <section data-pane="telas" hidden>
+      <div class="panel">
+        <h2>Telas</h2>
+        <p class="muted">Cada TV usa um endereço próprio com uma <b>chave de acesso</b>. O endereço é exibido <b>uma única vez</b>, ao adicionar a tela ou gerar uma nova chave: copie e configure na TV. <b>Online</b> = a TV deu sinal nos últimos minutos.</p>
+        <div id="key-new" class="token-new" hidden></div>
+        <table class="table" id="screens-table"></table>
+        <form id="screen-form" class="inline" data-admin>
+          <input name="name" placeholder="identificação (ex.: tv-refeitorio)" title="Letras minúsculas, números, - ou _" pattern="[a-z0-9][a-z0-9_-]*" required>
+          <input name="label" placeholder="nome exibido (ex.: TV do refeitório)">
+          <button class="btn primary">Adicionar tela</button>
+        </form>
+        <div class="error" id="screen-error"></div>
+      </div>
+    </section>
+
+    <!-- USUÁRIOS -->
+    <section data-pane="usuarios" hidden>
+      <div class="panel">
+        <h2>Usuários</h2>
+        <p class="muted"><b>Líder</b> publica e encerra avisos. <b>Admin</b> também gerencia usuários, telas, configurações e integrações.</p>
+        <table class="table" id="users-table"></table>
+        <h3>Novo usuário</h3>
+        <form id="user-form" class="inline">
+          <input name="username" placeholder="usuário (ex.: joao.lider)" required>
+          <input name="name" placeholder="nome exibido">
+          <input name="password" type="password" placeholder="senha (mín. 8)" minlength="8" required autocomplete="new-password">
+          <select name="role"><option value="leader">Líder</option><option value="admin">Admin</option></select>
+          <button class="btn primary">Criar</button>
+        </form>
+        <div class="error" id="user-error"></div>
+      </div>
+    </section>
+
+    <!-- CONFIG -->
+    <section data-pane="config" hidden>
+      <div class="panel narrow">
+        <h2>Configurações</h2>
+        <form id="settings-form">
+          <label>Nome da empresa (aparece nas telas)<input name="company_name" maxlength="80"></label>
+          <label>Logo
+            <div class="img-row"><input type="hidden" name="logo"><input type="file" id="logo-file" accept="image/*">
+              <img id="logo-preview" hidden alt=""><button type="button" class="btn ghost sm" id="logo-clear" hidden>Remover</button></div>
+          </label>
+          <div class="row two">
+            <label>Rodízio dos avisos normais (segundos)<input name="rotate_seconds" type="number" min="5" max="600"></label>
+            <label>Considerar a TV fora do ar após (minutos)<input name="offline_minutes" type="number" min="1" max="1440"></label>
+          </div>
+          <fieldset class="group">
+            <legend>Avisos urgentes</legend>
+            <div class="row two">
+              <label>Como o aviso urgente aparece
+                <select name="urgent_mode">
+                  <option value="interleave">Intercalar com os avisos normais</option>
+                  <option value="fixed">Fixo na tela até sair do ar</option>
+                </select></label>
+              <label>Tempo do aviso urgente na tela (segundos)<input name="urgent_seconds" type="number" min="10" max="600"></label>
+            </div>
+            <label class="radio"><input type="checkbox" name="sound_enabled"> Tocar alerta sonoro em avisos urgentes</label>
+            <label class="radio"><input type="checkbox" name="urgent_beep_repeat"> Repetir o alerta sonoro a cada 10 segundos enquanto o urgente estiver na tela</label>
+            <p class="muted small hint" id="urgent-hint"></p>
+          </fieldset>
+          <label>Aviso automático quando uma TV sair do ar <span class="muted small">(opcional)</span>
+            <input name="webhook_url" placeholder="https://… (endereço fornecido pela equipe de TI)"></label>
+          <p class="muted small hint">Quando uma TV ficar sem sinal, o painel avisa este endereço (por exemplo, o sistema de monitoramento da TI). Deixe em branco para não usar.</p>
+          <div class="error" id="settings-error"></div>
+          <div class="actions"><button class="btn primary">Salvar</button><button type="button" class="btn ghost" id="webhook-test">Testar aviso automático</button><span id="settings-ok" class="ok"></span></div>
+        </form>
+        <details class="tech" id="tech-details" hidden>
+          <summary>Detalhes técnicos</summary>
+          <div id="tech-info"></div>
+        </details>
+      </div>
+    </section>
+
+    <!-- API -->
+    <section data-pane="api" hidden>
+      <div class="panel">
+        <h2>Integrações</h2>
+        <p class="muted">Permite que outros sistemas da empresa (por exemplo, o monitoramento da TI) publiquem avisos automaticamente. Cada integração recebe um <b>código de acesso</b>, exibido uma única vez.</p>
+        <table class="table" id="tokens-table"></table>
+        <form id="token-form" class="inline"><input name="name" placeholder="nome da integração (ex.: monitoramento)" required><button class="btn primary">Gerar código de acesso</button></form>
+        <div id="token-new" class="token-new" hidden></div>
+        <details class="tech"><summary>Exemplo para a equipe de TI</summary>
+<pre id="api-example"></pre>
+        </details>
+      </div>
+    </section>
+
+    <!-- CONTA -->
+    <section data-pane="conta" hidden>
+      <div class="panel narrow">
+        <h2>Minha conta</h2>
+        <form id="pw-form">
+          <label>Senha atual<input type="password" name="current" required autocomplete="current-password"></label>
+          <label>Nova senha (mín. 8)<input type="password" name="new" minlength="8" required autocomplete="new-password"></label>
+          <div class="error" id="pw-error"></div>
+          <div class="actions"><button class="btn primary">Alterar senha</button><span class="ok" id="pw-ok"></span></div>
+        </form>
+        <h3>Verificação em duas etapas (2FA)</h3>
+        <p class="muted">Use um aplicativo autenticador (Google Authenticator, Microsoft Authenticator, Authy, 1Password…). Se perder o celular, um admin pode resetar o 2FA na aba Usuários.</p>
+        <div id="totp-off" hidden>
+          <button class="btn primary" id="totp-start" type="button">Ativar 2FA</button>
+          <div id="totp-setup" hidden>
+            <div class="totp-grid"><img id="totp-qr" alt="QR code do 2FA"><div>
+              <p>1. Escaneie o QR code no aplicativo<br>ou digite a chave: <code id="totp-secret"></code></p>
+              <form id="totp-enable-form" class="inline"><input name="code" inputmode="numeric" maxlength="7" placeholder="código de 6 dígitos" required autocomplete="one-time-code"><button class="btn primary">2. Confirmar e ativar</button></form>
+            </div></div>
+          </div>
+        </div>
+        <div id="totp-on" hidden>
+          <p><span class="tag ativo">2FA ATIVO</span> Sua conta pede o código do aplicativo a cada login.</p>
+          <form id="totp-disable-form" class="inline"><input type="password" name="password" placeholder="senha atual" required autocomplete="current-password"><input name="code" inputmode="numeric" maxlength="7" placeholder="código atual" required><button class="btn danger">Desativar 2FA</button></form>
+        </div>
+        <div class="error" id="totp-error"></div>
+      </div>
+    </section>
+  </main>
+  <footer class="app-foot" id="app-foot"></footer>
+</div>
+<div id="toast" class="toast" hidden></div>
+<script src="/static/admin.js"></script>
+</body>
+</html>

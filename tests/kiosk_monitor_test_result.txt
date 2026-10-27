@@ -1,0 +1,48 @@
+PASS C# da biblioteca compila (C# 5, mesmo nível do Windows PowerShell 5.1)
+PASS Lista numerada por DISPLAYn (numérico: DISPLAY10 depois de DISPLAY2) — 1=\\.\DISPLAY1 2=\\.\DISPLAY2 3=\\.\DISPLAY10
+PASS Escala calculada do DPI (144 dpi = 150%, 120 = 125%)
+PASS Sem -Monitor = principal (comportamento antigo)
+PASS -Monitor 0 = principal
+PASS -Monitor principal
+PASS -Monitor 2 = DISPLAY2 (à esquerda/acima, coordenadas negativas) — monitor 2 = \\.\DISPLAY2 2880x1620 em -2880,-200 (escala 150%)
+PASS -Monitor 3 = DISPLAY10
+PASS -Monitor DISPLAY10 (nome do dispositivo)
+PASS -Monitor \\.\display2 (formato completo, maiúsc./minúsc.)
+PASS Monitor inexistente → principal com aviso (Fallback) — monitor 5 não encontrado (3 monitor(es) conectados); usando o principal \\.\DISPLAY1
+PASS Dispositivo inexistente → principal com aviso
+PASS Monitor 3 desligado (só 2 conectados) → principal
+PASS Sem flag de principal → usa o 1º da lista
+PASS Nenhum monitor lido → Monitor vazio (abre sem ajuste)
+PASS Validação de -Monitor (aceita/recusa) — aceitos indevidamente: ; recusados indevidamente: 
+PASS --window-position/--window-size com coordenadas negativas — --window-position=-2880,-200 --window-size=2880,1620
+PASS Sem monitor → nenhum argumento extra
+PASS Janela cobrindo o monitor (tolerância 2 px)
+PASS Janela no monitor errado não conta
+PASS Janela no monitor certo mas tamanho de outro DPI não conta
+PASS Perfil tv casa com o próprio Edge
+PASS Perfil tv NÃO casa com o Edge da tela tv-2 (bug de prefixo da 1.1.2 corrigido)
+PASS Perfil tv-2 casa com o próprio processo filho
+PASS Perfil sem aspas e maiúsc./minúsc. diferentes
+PASS Edge normal (sem --user-data-dir) não casa
+PASS Lançador tv casa com o próprio processo (inclusive o da 1.1.2)
+PASS Reinstalar tv NÃO mata o lançador da tv-2
+PASS Reinstalar tv-2 NÃO mata o lançador da tv
+PASS Edge já abriu no monitor certo (--window-position funcionou) → não mexe — janela já estava em \\.\DISPLAY2 (2880x1620 em -2880,-200) — tentativa 1
+PASS Edge abriu no principal → move para o monitor 2 (SetWindowPos) — janela movida para \\.\DISPLAY2 (2880x1620 em -2880,-200) — tentativa 2
+PASS Troca de DPI entre monitores: 2ª tentativa corrige o tamanho — janela movida para \\.\DISPLAY2 (2880x1620 em -2880,-200) — tentativa 3
+PASS Janela que não obedece → desiste após 4 tentativas e informa — não consegui cobrir \\.\DISPLAY2 exatamente (janela em 0,0-1920,1080)
+PASS Janela do Edge não aparece → para no tempo limite — janela do Edge do quiosque não encontrada em 1 s
+PASS Lançadores gerados (tv/monitor 1 e tv-2/monitor 3) sem erro de sintaxe — 0 / 0 erros
+PASS Mutex, perfil e log separados por tela
+PASS Lançador guarda o pedido (-Monitor) e não coordenadas fixas
+PASS Lançador contém a biblioteca de monitores
+PASS Lançador sem resto de expansão na instalação (variáveis do lançador intactas)
+PASS Sem -Monitor: lançador não move janela (comportamento da 1.1.2)
+PASS Lançador resolve o monitor na hora (3 = DISPLAY10)
+PASS Resolução do monitor 3 mudou (4K) → usa o tamanho novo
+PASS Monitor 3 desligado → principal + linha no log — 2026-10-27 12:44:27  monitor: monitor 3 não encontrado (2 monitor(es) conectados); usando o principal \\.\DISPLAY1 [DPI: ]
+PASS Sem -Monitor → nada a resolver
+PASS Test-KioskEdge da tela tv ignora o Edge da tv-2 (abre o seu)
+PASS Test-KioskEdge da tela tv-2 vê o seu Edge
+
+RESULTADO: 46/46 verificações OK

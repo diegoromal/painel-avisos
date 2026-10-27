@@ -1,0 +1,5 @@
+Traefik v2.11 + allowlist-v2 (ADMIN_ALLOWED_IPS=10.99.99.99/32):
+  /admin                           403
+  /api/admin/info                  403
+  /tela?screen=tv-allow&key=<chave> 200
+  /healthz                         200

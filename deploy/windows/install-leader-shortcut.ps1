@@ -1,6 +1,6 @@
 ﻿<#
 .SYNOPSIS  Cria na Área de Trabalho do líder um atalho "Publicar aviso" para o painel.
-.EXAMPLE   .\install-leader-shortcut.ps1 -Server 192.168.1.195:8080
+.EXAMPLE   .\install-leader-shortcut.ps1 -Server 192.168.0.50:8080
 #>
 param([Parameter(Mandatory = $true)][string]$Server)
 $Server = $Server -replace '^https?://', '' -replace '/+$', ''

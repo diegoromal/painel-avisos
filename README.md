@@ -1,530 +1,293 @@
 # Painel de Avisos
 
-Quadro de comunicados para as TVs da empresa. O líder publica um aviso pelo navegador e ele aparece
-**na hora** (em menos de 1 segundo) nas TVs.
+## O que é
 
-Funciona de dois jeitos:
+Quadro de comunicados para TVs, administrado pelo navegador. Um único servidor distribui avisos para uma ou várias telas, na rede local ou pela internet.
 
-- **Rede local (LAN)**: um `.exe` no Windows, sem internet. Veja [Instalação no Windows](#instalação-no-windows-rede-local).
-- **Internet (HTTPS)**: container Docker atrás de um Traefik, ex.: `https://avisos.protatic.qosit.cloud`.
-  Veja [Publicação na internet com Traefik](#publicação-na-internet-com-traefik).
+## Recursos
+
+- Avisos normais em rodízio e urgentes com destaque e som; agendamento e validade.
+- Texto com formatação simples, imagens e logo da organização.
+- Várias telas, com chaves individuais e seleção dos destinos de cada aviso.
+- Usuários administradores e líderes, histórico de ações e 2FA opcional.
+- Atualizações em tempo real, reconexão e continuidade com o último conteúdo recebido.
+- Cache offline por service worker em HTTPS ou localhost, após o primeiro carregamento.
+- Status das TVs, webhook de indisponibilidade e API com token.
+
+## Capturas de tela
 
 ![TV com aviso](screenshots/02-tela-aviso-normal.png)
 
-| Tela ociosa | Aviso urgente | Painel do líder | Telas e chaves |
-|---|---|---|---|
-| ![](screenshots/01-tela-ociosa.png) | ![](screenshots/03-tela-urgente.png) | ![](screenshots/04-admin-avisos.png) | ![](screenshots/05-admin-telas.png) |
-
-| Sem servidor (cache offline) | Chave inválida/revogada | Configurações |
+| Tela ociosa | Aviso urgente | Administração |
 |---|---|---|
-| ![](screenshots/06-tela-offline-service-worker.png) | ![](screenshots/07-tela-nao-autorizada.png) | ![](screenshots/08-admin-configuracoes.png) |
+| ![Ociosa](screenshots/01-tela-ociosa.png) | ![Urgente](screenshots/03-tela-urgente.png) | ![Avisos](screenshots/04-admin-avisos.png) |
 
-Opcional (`SHOW_SERVER_INFO=1`, só admin): [Detalhes técnicos](screenshots/09-admin-detalhes-tecnicos-opcional.png).
+| Telas e chaves | Configurações | Sem conexão |
+|---|---|---|
+| ![Telas](screenshots/05-admin-telas.png) | ![Configurações](screenshots/08-admin-configuracoes.png) | ![Offline](screenshots/06-tela-offline-service-worker.png) |
 
-## O que é
+Também disponíveis: [tela não autorizada](screenshots/07-tela-nao-autorizada.png) e [detalhes técnicos opcionais](screenshots/09-admin-detalhes-tecnicos-opcional.png).
 
-Um único programa (`painel-avisos.exe` / `painel-avisos-linux-amd64`, cerca de 12 MB, sem dependências). Ele:
+## Como funciona
 
-- serve o **painel do líder** em `/admin` (usuário + senha, com 2FA opcional);
-- serve a **tela da TV** em `/tela?screen=<nome>&key=<chave>`;
-- guarda tudo num SQLite na pasta de dados: avisos, usuários, telas, imagens e histórico.
+1. Um servidor Go único entrega a aplicação e os arquivos web embutidos.
+2. SQLite guarda avisos, usuários, telas e histórico; imagens ficam na pasta de dados.
+3. O painel `/admin` permite publicar e administrar pelo navegador.
+4. Cada TV abre `/tela?screen=<nome>&key=<chave>`.
+5. SSE entrega alterações em tempo real, com reconexão automática.
 
-**Recursos**
+## Instalação do servidor
 
-- **Prioridade**: um aviso *Normal* entra no rodízio (15 s por padrão). Um *Urgente* aparece em vermelho, com pulsação e alerta sonoro. Por padrão ele fica 60 s na tela, apitando a cada 10 s; depois passam os avisos normais uma vez e o urgente volta (veja "Avisos urgentes").
-- **Validade**: início e fim agendáveis. Sem fim, o aviso fica até alguém encerrar.
-- **Várias TVs**: cada uma tem nome e **chave própria**. O aviso vai para todas ou para algumas.
-- **Vários líderes**: cada um com login. O histórico registra quem publicou, editou e encerrou.
-- **Imagem** no aviso e **logo** da empresa, servidos só para usuários logados ou TVs com chave.
-- **Formatação simples**: `**negrito**`, `*itálico*`, `__sublinhado__`, e linhas começando com `- ` viram lista.
-- **Tempo real** via Server-Sent Events, com reconexão automática.
-- **Resiliência**: se o servidor ou a internet cair, a TV continua com o último conteúdo e mostra "reconectando…".
-  Com HTTPS (ou servidor no próprio PC da TV), a TV **abre até depois de reiniciar sem rede**, graças ao service worker.
-- **Status das TVs** (online/offline) e **webhook** opcional quando uma TV some, protegido contra SSRF.
-- **API com token** para publicar avisos a partir de outros sistemas (Zabbix, scripts).
+### (a) Docker Compose standalone
 
-### Novidades da versão 1.1 (segurança para publicar na internet)
-
-| Recurso | Resumo |
-|---|---|
-| Chave por tela | Cada TV tem uma chave aleatória (só o hash fica no banco). Ela é exibida uma vez e pode ser regenerada ou revogada; a TV é derrubada na hora. Sem chave válida, a TV mostra **"Tela não autorizada"** (HTTP 401/403). |
-| Uploads protegidos | `/uploads/` exige sessão logada ou chave de tela válida. |
-| Proxy reverso | `TRUST_PROXY` diz em quais proxies confiar para `X-Forwarded-For/Proto`, usados no IP real (limite de login, auditoria), no cookie `Secure` e no HSTS. |
-| Cabeçalhos | CSP estrita (sem script/style inline), HSTS em HTTPS, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, `Permissions-Policy`, `nosniff`, COOP/CORP. |
-| Webhook anti-SSRF | Bloqueia loopback, redes privadas, link-local, CGNAT, metadados de nuvem (169.254.169.254, fd00:ec2::254), NAT64 e equivalentes IPv6. A checagem acontece **no momento da conexão** (derrota DNS rebinding) e também nos redirecionamentos. |
-| 2FA (TOTP) | Opcional por usuário, com QR code. O código é pedido no login, com anti-replay. Se o celular se perder, um admin reseta. |
-| Offline | Service worker guarda a página, os arquivos e as imagens da TV. Se a chave for revogada, o cache é apagado. |
-
-### Versão 1.2.1
-
-- Instalador Windows: tarefa agendada por tela, logon automático opcional, diagnóstico e desinstalação.
-- Só o script do Windows mudou funcionalmente; a VM não precisa ser atualizada.
-
-### Versão 1.2.0
-
-- **Aviso urgente intercalado (novo padrão):** o urgente fica 60 s na TV, com alerta sonoro a cada 10 s. Depois passa um ciclo dos avisos normais e o urgente volta, apitando de novo. Antes ele ocupava a tela sozinho e parava o rodízio.
-- Novas opções em **Configurações > Avisos urgentes**: modo (*Intercalar com os avisos normais* ou *Fixo na tela até sair do ar*), tempo do urgente na tela (10 a 600 s, padrão 60) e repetir o alerta a cada 10 s (padrão ligado).
-- Instalações existentes passam para o novo padrão sozinhas ao atualizar, sem perder nada. Para manter o comportamento antigo, escolha *Fixo na tela até sair do ar*.
-- A TV agora recarrega sozinha quando o servidor é atualizado, mantendo a posição do rodízio. Isso vale a partir desta versão; veja abaixo como pegar a 1.2.0 na TV.
-
-### Versão 1.1.3
-
-- Quiosque em **PC com vários monitores**: `install-tv-kiosk.ps1 -ListMonitors` e `-Monitor <n>` (veja "PC com vários monitores").
-- Várias telas no mesmo PC: reinstalar uma tela não fecha mais o Edge de outra quando um nome é começo do outro (ex.: `tv` e `tv-2`).
-- Só mudou o script do Windows. O servidor não mudou: atualizar a VM é opcional (só muda a versão exibida).
-
-### Versão 1.1.2
-
-- **Correção:** com 2 ou mais avisos normais, a TV podia ficar presa no primeiro aviso. A barra do rodízio enchia, mas a troca não acontecia. A causa era a página da TV ser reaberta a cada poucos segundos, o que voltava sempre ao 1º aviso.
-  - O lançador do quiosque (`install-tv-kiosk.ps1`) esperava o `msedge.exe` terminar e reabria o Edge 5 s depois. Quando já havia um Edge aberto com o mesmo perfil (por exemplo, o instalador executado 2 vezes, ou dois atalhos de inicialização), o `msedge.exe` saía na hora e abria a tela de novo em outra aba, sem parar.
-  - Agora existe um único lançador por tela. Ele só reabre o Edge se não houver nenhum Edge do quiosque rodando. Reinstalar encerra os lançadores antigos e remove o atalho duplicado.
-  - A TV também guarda a posição do rodízio: se a página for reaberta, ela continua do aviso em que estava. O tempo é medido com relógio monotônico, então um ajuste do relógio do Windows não trava a troca.
-- Cache da TV atualizado (`painel-tela-v4`). A TV pega o código novo na próxima vez que a página abrir.
-- **Na TV:** execute de novo o `install-tv-kiosk.ps1` (mesmos parâmetros). Isso encerra o loop antigo e reabre o Edge já com a versão nova.
-
-### Versão 1.1.1
-
-- A tela **Configurações** não mostra mais informações técnicas do servidor (modo, proxies, IP). Elas continuam no log de inicialização e, se quiser, numa seção recolhida **"Detalhes técnicos"** só para admin (`SHOW_SERVER_INFO=1`).
-- Textos do painel e da TV revisados para o cliente final: "Integrações" no lugar de "API/Tokens", "Aviso automático" no lugar de "Webhook", mensagens de erro sem códigos técnicos, versão discreta no rodapé.
-- Nenhuma mudança no comportamento de segurança.
-
-## Arquitetura
-
-```
-LAN (Windows)                                       Internet (VM 10.60.20.10 com Traefik)
-PC do líder ──http──> PC da TV (servidor :8080)     Navegador/TV ──https──> Traefik ──rede docker──> painel-avisos:8080
-                      └─ Edge quiosque (127.0.0.1)                          (TLS, ipAllowList)           (sem porta publicada)
-```
-
----
-
-## Instalação no Windows (rede local)
-
-Requisitos: Windows 10/11 64 bits e Microsoft Edge. Use **IP fixo** no PC servidor (reserva DHCP).
-
-### 1. PC da TV (servidor + tela)
-
-1. Copie a pasta `painel-avisos` deste ZIP para o PC (ex.: `C:\Instaladores\painel-avisos`).
-2. Abra o **PowerShell como Administrador** e rode:
-   ```powershell
-   cd C:\Instaladores\painel-avisos\deploy\windows
-   Set-ExecutionPolicy -Scope Process Bypass -Force
-   .\install-server.ps1                      # ou: .\install-server.ps1 -RequireScreenKeys
-   ```
-   O script:
-   - copia o programa para `C:\PainelAvisos\`;
-   - cria os dados em `C:\ProgramData\PainelAvisos\` (acesso só de SYSTEM e Administradores);
-   - **mostra a senha do `admin` uma única vez**;
-   - libera a porta 8080 no Firewall (redes Privada e Domínio);
-   - cria a tarefa **PainelAvisos** (sobe no boot como SYSTEM e reinicia se cair);
-   - desliga a suspensão do PC.
-
-   `-RequireScreenKeys` exige chave em todas as TVs (recomendado). Sem essa opção, TVs antigas sem chave continuam aceitas (modo legado).
-3. Entre em `http://127.0.0.1:8080/admin` > **Telas** > *Adicionar tela* (ex.: `tv-principal`) e **copie a chave exibida**.
-4. Configure o quiosque, logado com o usuário que fica na TV:
-   ```powershell
-   .\install-tv-kiosk.ps1 -Server 127.0.0.1:8080 -Screen tv-principal -Key tk_COLE_A_CHAVE_AQUI
-   ```
-5. Configure o logon automático (`netplwiz`) e, na BIOS, "Restore on AC Power Loss = Power On".
-   Veja `deploy/windows/disable-sleep-screensaver.txt`.
-
-### 2. PC do líder
-
-Abra `http://192.168.1.195:8080/admin` ou crie um atalho com `.\install-leader-shortcut.ps1 -Server 192.168.1.195:8080`.
-
-### Atualizar, remover, recuperar
-
-- **Atualizar**: troque o `.exe` e rode `install-server.ps1` de novo. Os dados são mantidos.
-- **Remover**: `uninstall-server.ps1` (ou `uninstall-server.ps1 -RemoveData` para apagar os dados).
-- **Esqueci a senha ou perdi o 2FA do admin**: `C:\PainelAvisos\painel-avisos.exe reset-admin -data C:\ProgramData\PainelAvisos`
-  gera uma nova senha e remove o 2FA do admin.
-- **Backup**: `painel-avisos.exe backup -data C:\ProgramData\PainelAvisos -out D:\backup\painel.db`
-  (cópia consistente com o servidor ligado). Copie também a pasta `uploads`.
-
----
-
-## Publicação na internet com Traefik
-
-Alvo: `https://avisos.protatic.qosit.cloud`, na VM `10.60.20.10`, que já roda Traefik em Docker.
-O kit está em `deploy/traefik/`.
-
-### Pré-requisitos
-
-1. **Docker + Compose v2** na VM (`docker compose version`).
-2. **DNS**: um registro `A` (ou `CNAME`) de `avisos.protatic.qosit.cloud` para o **IP público** que chega ao Traefik.
-   Pode ser NAT/port-forward de 443 (e 80, se o desafio ACME for HTTP-01) para a `10.60.20.10`.
-   Se o Traefik usa um certificado curinga `*.protatic.qosit.cloud` (desafio DNS), não precisa de mais nada.
-3. **Traefik** v2 ou v3 com provider Docker, um entrypoint HTTPS e um certresolver.
-   O kit foi testado com Traefik **v3.5** e **v2.11**.
-
-### Descobrir os nomes do Traefik (rede, entrypoint, certresolver)
+Requer Docker e Compose v2. Na raiz do projeto:
 
 ```bash
-# 1) container e versão do Traefik
-docker ps --format '{{.Names}}\t{{.Image}}' | grep -i traefik
-docker exec <traefik> traefik version
+docker compose -p painel-avisos up -d --build
+docker compose -p painel-avisos logs painel-avisos
+```
 
-# 2) rede(s) Docker do Traefik  -> TRAEFIK_NETWORK
+Abra `http://IP_DO_SERVIDOR:8080/admin`. O `docker-compose.yml` da raiz publica HTTP na porta 8080 e é ideal para LAN. O nome de projeto explícito mantém o volume `painel-avisos_painel-data`.
+
+**O projeto não tem HTTPS embutido.** Para internet, use a opção (b) ou outro proxy reverso com TLS. Por exemplo, Caddy pode usar `avisos.exemplo.com { reverse_proxy 127.0.0.1:8080 }`; no nginx, configure um servidor TLS com certificado, `proxy_pass http://127.0.0.1:8080`, `proxy_buffering off` para SSE e os cabeçalhos encaminhados. Configure `PUBLIC_URL=https://avisos.exemplo.com` no servidor e `TRUST_PROXY` para o endereço/rede do proxy. Proteja a porta HTTP contra acesso externo direto.
+
+Para exigir chaves também na LAN, habilite `PAINEL_ALLOW_KEYLESS: "0"` no Compose. A configuração padrão da LAN aceita telas sem chave por compatibilidade.
+
+### (b) Atrás de um Traefik existente
+
+Use os arquivos em `deploy/traefik/`. Pré-requisitos: Docker com Compose v2, Traefik v2/v3 com provider Docker, rede externa compartilhada, entrypoint HTTPS e certresolver configurados. O DNS de `avisos.exemplo.com` deve apontar para o endereço público do proxy; libere as portas exigidas pelo desafio ACME escolhido.
+
+Descubra os nomes reais, sem assumir os valores do exemplo:
+
+```bash
+docker ps --format '{{.Names}}\t{{.Image}}'
 docker inspect <traefik> -f '{{range $k,$v := .NetworkSettings.Networks}}{{$k}} {{end}}'
-docker network ls
-
-# 3) sub-rede dessa rede  -> TRUST_PROXY (o ideal é exatamente este CIDR)
 docker network inspect <rede> -f '{{range .IPAM.Config}}{{.Subnet}}{{end}}'
-
-# 4) entrypoints e certresolvers -> TRAEFIK_ENTRYPOINT / TRAEFIK_CERTRESOLVER
-docker inspect <traefik> -f '{{json .Args}}' | tr ',' '\n' | grep -Ei 'entrypoints\.|certificatesresolvers\.'
-#    se a config estiver em arquivo (traefik.yml/toml), veja onde está montado e leia:
+docker inspect <traefik> -f '{{json .Args}}'
 docker inspect <traefik> -f '{{range .Mounts}}{{.Source}} -> {{.Destination}}{{"\n"}}{{end}}'
-#    jeito mais fácil: copiar de um serviço que JÁ funciona atrás desse Traefik
-docker inspect <outro-servico> -f '{{json .Config.Labels}}' | tr ',' '\n' | grep -Ei 'entrypoints|certresolver|middlewares'
-
-# 5) existe compress global no entrypoint? (atrapalha o tempo real, veja "SSE e compressão")
-docker inspect <traefik> -f '{{json .Args}}' | tr ',' '\n' | grep -i 'middlewares'
 ```
 
-### Passo a passo na VM
+Em `.Args`, procure `entrypoints` e `certificatesresolvers`. Se a configuração estiver em arquivo, consulte a origem indicada em `.Mounts`. As labels de outro serviço publicado também podem indicar os nomes usados.
 
 ```bash
-# 1) copiar o projeto (pasta painel-avisos do ZIP) para a VM
-sudo mkdir -p /opt/painel-avisos && sudo chown $USER /opt/painel-avisos
-#   (scp/rsync do ZIP, depois unzip em /opt/painel-avisos)
-cd /opt/painel-avisos/deploy/traefik
-
-# 2) configurar
+cd deploy/traefik
 cp .env.example .env
-nano .env        # DOMAIN, TRAEFIK_NETWORK, TRAEFIK_ENTRYPOINT, TRAEFIK_CERTRESOLVER, TRUST_PROXY
+# Edite .env com os nomes e CIDRs encontrados.
 chmod 600 .env
-
-# 3) validar e subir
-docker compose config >/dev/null && echo "compose OK"
+docker compose config >/dev/null
 docker compose up -d --build
-
-# 4) senha inicial do admin (aparece só no primeiro start)
-docker compose logs painel-avisos | grep -A1 'PRIMEIRO USO'
-
-# 5) testar
-curl -sI https://avisos.protatic.qosit.cloud/healthz       # 200, com strict-transport-security
+docker compose logs painel-avisos
+curl -I https://avisos.exemplo.com/healthz
 ```
 
-Depois do start, o Traefik só publica o container quando ele fica **healthy** (cerca de 10 s). Antes disso, o Traefik responde 404.
+O container não publica portas no host: o Traefik chega à porta 8080 pela rede Docker. Aguarde o estado saudável antes de diagnosticar um 404 inicial.
 
-Primeiro acesso em `https://avisos.protatic.qosit.cloud/admin`:
+Todas as variáveis do `.env.example`:
 
-1. Troque a senha (Minha conta) e **ative o 2FA**.
-2. Crie os usuários dos líderes.
-3. Crie as telas e anote as chaves.
-4. Configure nome e logo da empresa.
+| Variável | Valor de exemplo / função |
+|---|---|
+| `DOMAIN` | `avisos.exemplo.com`: domínio sem esquema, usado no router e para gerar `PAINEL_PUBLIC_URL=https://${DOMAIN}`. |
+| `TRAEFIK_NETWORK` | `proxy`: nome da rede Docker externa do Traefik. |
+| `TRAEFIK_ENTRYPOINT` | `websecure`: entrypoint HTTPS existente. |
+| `TRAEFIK_CERTRESOLVER` | `letsencrypt`: resolver ACME existente; adapte as labels se sua instalação usar certificados fornecidos por arquivo. |
+| `TRUST_PROXY` | `172.16.0.0/12,192.168.0.0/16`: exemplo amplo; prefira o CIDR exato da rede do proxy. Só esses endereços podem informar `X-Forwarded-For/Proto`. |
+| `ALLOW_KEYLESS` | `0`: exige chave das TVs. |
+| `WEBHOOK_ALLOW_PRIVATE` | `0`: impede webhook para redes privadas. |
+| `SHOW_SERVER_INFO` | `0`: oculta detalhes técnicos no painel; `1` exibe para administradores. Os detalhes continuam nos logs. |
+| `WEBHOOK_URL` | Vazio: não força uma URL no início; uma URL preenchida substitui a configuração do painel a cada inicialização. |
+| `ADMIN_INITIAL_PASSWORD` | Vazio: gera e exibe a senha inicial. Uma senha preenchida só vale na criação do admin. |
+| `ADMIN_ALLOWED_IPS` | Opcional: IPs/CIDRs separados por vírgula para o overlay de restrição administrativa. |
+| `COMPOSE_FILE` | Opcional: seleciona Compose base e overlay v2 ou v3, conforme abaixo. |
+| `BACKUP_DIR` | `/opt/painel-avisos/backups`: destino usado por `backup.sh`. |
+| `BACKUP_RETENTION_DAYS` | `14`: retenção dos arquivos de backup. |
+| `TZ` | `America/Sao_Paulo`: fuso do container. |
 
-### Variáveis do `.env`
+`PUBLIC_URL` é uma configuração do servidor, não uma variável interpolada por esse Compose: nele, altere `DOMAIN` para mudar a URL pública. `PAINEL_VERSION` é opcional nos dois Composes e define a tag da imagem local (padrão `1.2.1`); a compilação usa o código presente na pasta.
 
-| Variável | Obrigatória | Padrão | O que é |
-|---|---|---|---|
-| `DOMAIN` | **sim** | `avisos.protatic.qosit.cloud` | Domínio público (regra `Host()` e `PUBLIC_URL`) |
-| `TRAEFIK_NETWORK` | **sim** (confirmar) | `proxy` | Rede Docker externa do Traefik (comum: `proxy`, `traefik`, `traefik_proxy`, `web`) |
-| `TRAEFIK_ENTRYPOINT` | **sim** (confirmar) | `websecure` | Entrypoint HTTPS (comum: `websecure`, `https`) |
-| `TRAEFIK_CERTRESOLVER` | **sim** (confirmar) | `letsencrypt` | Certresolver ACME (comum: `letsencrypt`, `le`). Se o Traefik usa certificado curinga via arquivo, use o resolver que emite o curinga ou peça ajuste |
-| `TRUST_PROXY` | recomendado | `172.16.0.0/12,192.168.0.0/16` | CIDRs do Traefik. O ideal é a sub-rede exata da rede do Traefik |
-| `ALLOW_KEYLESS` | não | `0` | `1` aceita TVs sem chave. **Não use na internet** |
-| `WEBHOOK_ALLOW_PRIVATE` | não | `0` | `1` permite webhook para IPs privados (10/8, 172.16/12, 192.168/16, 100.64/10, fc00::/7) |
-| `WEBHOOK_URL` | não | vazio | Webhook de TV offline (substitui o valor configurado no painel a cada start) |
-| `SHOW_SERVER_INFO` | não | `0` | `1` mostra uma seção recolhida **"Detalhes técnicos"** em Configurações (modo, URL, proxies confiáveis, IP visto), **só para admin**. Com `0` (padrão) nada disso aparece nem é enviado ao navegador; os mesmos dados ficam no log: `docker compose logs painel-avisos \| grep modo:` |
-| `ADMIN_INITIAL_PASSWORD` | não | vazio | Senha do admin no **primeiro** start. Vazio = gerada e mostrada no log (recomendado) |
-| `ADMIN_ALLOWED_IPS` + `COMPOSE_FILE` | não | — | Restringe o painel administrativo por IP (veja abaixo) |
-| `BACKUP_DIR`, `BACKUP_RETENTION_DAYS` | não | `/opt/painel-avisos/backups`, `14` | Usados por `backup.sh` |
+#### Restringir o painel por IP
 
-O container escuta em `0.0.0.0:8080` **dentro** da rede Docker. O compose **não publica portas**, então só o Traefik alcança o container.
+No `.env`, descomente e ajuste:
 
-### Restringir o painel administrativo por IP (opcional, recomendado)
-
-Bloqueia por IP o `/admin`, `/api/admin`, `/api/v1`, `/api/login`, `/api/logout` e `/api/me`.
-`/tela`, `/api/screen`, `/uploads`, `/static` e `/healthz` continuam abertos, porque as TVs usam a chave delas.
-
-No `.env`:
-```bash
-ADMIN_ALLOWED_IPS=200.200.200.200/32,10.60.0.0/16
-COMPOSE_FILE=docker-compose.yml:docker-compose.allowlist-v3.yml    # Traefik v3 (ipAllowList)
-# COMPOSE_FILE=docker-compose.yml:docker-compose.allowlist-v2.yml  # Traefik v2 (ipWhiteList)
+```dotenv
+ADMIN_ALLOWED_IPS=203.0.113.10/32,10.0.0.0/8
+COMPOSE_FILE=docker-compose.yml:docker-compose.allowlist-v3.yml
+# Para Traefik v2, use docker-compose.allowlist-v2.yml.
 ```
-Depois rode `docker compose up -d`. As mesmas labels estão comentadas no `docker-compose.yml`, caso prefira editar direto.
 
-Se houver outro proxy ou CDN **na frente** do Traefik, o IP visto é o desse proxy. Nesse caso configure
-`forwardedHeaders.trustedIPs` no entrypoint ou `ipallowlist.ipstrategy.depth=1` no middleware.
+Execute `docker compose up -d`. Os overlays usam `ipAllowList` (v3) ou `ipWhiteList` (v2) e restringem `/admin`, `/api/admin`, `/api/v1`, `/api/login`, `/api/logout` e `/api/me`. As rotas da TV continuam acessíveis com a chave. Inclua o IP de saída das integrações na lista. Se houver CDN/proxy anterior, ajuste os cabeçalhos confiáveis e a estratégia de IP no Traefik conforme a topologia.
 
-### SSE (tempo real) e compressão
+#### SSE e compressão
 
-- O router do painel **não deve** usar o middleware `compress`. Testado no Traefik v3.5: com `compress`, o
-  `text/event-stream` passa a ser compactado (gzip), fica preso em buffer e a TV para de receber avisos.
-- Se o entrypoint tiver `compress` global, configure `excludedContentTypes=text/event-stream` no middleware
-  (também testado: com essa exclusão, o tempo real funciona normalmente).
-- Não é preciso ajustar `responseForwarding.flushInterval`: o Traefik repassa `text/event-stream` na hora
-  (medido: 3 a 6 ms entre publicar e chegar na TV, no v3.5 e no v2.11).
-  O servidor manda `ping` a cada 15 s, então timeouts de ociosidade (ex.: `idleTimeout` de 180 s) não derrubam a conexão.
+Evite middleware `compress` nesse router. Se houver compressão global, exclua `text/event-stream` com `excludedContentTypes=text/event-stream`. Bufferização do fluxo pode atrasar os avisos. O servidor envia ping a cada 15 segundos; preserve conexões longas e desative buffering em outros proxies.
 
-### Atualizar a versão (mantendo os dados)
+### (c) Windows sem Docker
 
-Os dados (banco, imagens, logo) ficam no volume Docker **`painel-avisos_painel-data`**. O nome do projeto é fixo no compose (`name: painel-avisos`), então o volume é o mesmo em qualquer atualização.
-**Nunca** use `docker compose down -v`: o `-v` apaga o volume.
+Em Windows 10/11 64 bits, gere o binário com `build.sh` ou disponibilize `painel-avisos.exe`. No PowerShell como Administrador, em `deploy\windows`, execute `Set-ExecutionPolicy -Scope Process Bypass -Force` e `.\install-server.ps1 -RequireScreenKeys` (use `-ExePath C:\caminho\painel-avisos.exe` se necessário). O instalador copia o executável para `C:\PainelAvisos`, mantém dados em `C:\ProgramData\PainelAvisos`, mostra a senha inicial, libera a porta 8080 nas redes Privada/Domínio e cria a tarefa de servidor no boot como SYSTEM. Abra `http://IP_DO_SERVIDOR:8080/admin`; mantenha um endereço fixo/reserva DHCP.
+
+## Primeiro acesso ao admin
+
+Abra `/admin` e entre como `admin` com a senha gerada na saída inicial (`docker compose logs painel-avisos`). Troque a senha em **Minha conta**, ative 2FA, crie usuários e cadastre as telas em **Telas**. Copie a chave exibida uma única vez e use a URL completa na TV. Configure o nome e o logo da organização.
+
+Para recuperar o acesso e remover o 2FA do admin:
 
 ```bash
-# 0) backup antes de atualizar
-sudo /opt/painel-avisos/deploy/traefik/backup.sh
-
-# 1) guardar uma cópia do .env (o ZIP NÃO contém .env, então ele não é sobrescrito, mas por garantia)
-cp /opt/painel-avisos/deploy/traefik/.env ~/painel-avisos.env.bak
-
-# 2) substituir os arquivos pelos do ZIP novo (a pasta do ZIP é painel-avisos/)
-unzip -o ~/painel-avisos.zip -d /opt
-chmod +x /opt/painel-avisos/deploy/traefik/*.sh
-cmp -s ~/painel-avisos.env.bak /opt/painel-avisos/deploy/traefik/.env && echo ".env preservado"
-
-# 3) (1.1.1) variável nova opcional; o padrão já é 0
-grep -q '^SHOW_SERVER_INFO=' /opt/painel-avisos/deploy/traefik/.env || echo 'SHOW_SERVER_INFO=0' >> /opt/painel-avisos/deploy/traefik/.env
-#    se o seu .env tiver PAINEL_VERSION=..., ajuste para a versão nova (só muda a tag da imagem)
-
-# 4) reconstruir e subir
-cd /opt/painel-avisos/deploy/traefik
-docker compose up -d --build
-docker compose ps                                      # aguarde "healthy" (~10 s)
-docker compose logs --tail 20 painel-avisos | grep -E 'modo:|versao'
-curl -s https://avisos.protatic.qosit.cloud/healthz    # {"ok":true,"version":"1.2.1"}
+docker compose exec painel-avisos painel-avisos reset-admin
 ```
-Usuários, telas, chaves das TVs, 2FA e avisos são mantidos. As TVs reconectam sozinhas em segundos.
-Ao abrir o painel, faça **Ctrl+F5** uma vez para garantir a interface nova.
 
-**TVs:** a partir da 1.2.0, a TV recarrega sozinha quando o servidor é atualizado. Uma TV que ainda está com a 1.1.x aberta não tem esse recurso: ela continua funcionando como antes (urgente fixo) até recarregar. Isso acontece sozinho na recarga diária das 4h. Para ver o urgente intercalado na hora, aperte **F5** na TV, ou **Alt+F4** (o lançador reabre o Edge em até 5 s).
+No Windows: `C:\PainelAvisos\painel-avisos.exe reset-admin -data C:\ProgramData\PainelAvisos`. Use sempre a mesma pasta de dados do servidor.
 
-### Backup diário
+## Backup e restauração
+
+No ambiente Traefik, `backup.sh` cria uma cópia consistente do banco e um arquivo separado com uploads, aplicando a retenção configurada. Requer ferramentas como `flock`, `gzip` e `tar`, além de acesso ao Docker.
 
 ```bash
-chmod +x backup.sh restore.sh
-sudo ./backup.sh                                  # teste manual
-sudo crontab -e                                   # agenda diária às 03:15:
-15 3 * * * /opt/painel-avisos/deploy/traefik/backup.sh >> /var/log/painel-avisos-backup.log 2>&1
+./deploy/traefik/backup.sh
+./deploy/traefik/restore.sh /opt/painel-avisos/backups/painel-AAAAMMDD-HHMMSS.db.gz /opt/painel-avisos/backups/uploads-AAAAMMDD-HHMMSS.tar.gz
 ```
-O `backup.sh` faz:
 
-- uma cópia consistente do SQLite com o servidor ligado (`VACUUM INTO`, equivalente ao `.backup`, com `integrity_check`), compactada em `.db.gz`;
-- um `.tar.gz` das imagens;
-- permissões 600 e retenção de `BACKUP_RETENTION_DAYS` dias.
+A restauração interrompe o serviço e substitui os dados; faça um backup antes. Os scripts operam no Compose de `deploy/traefik/`. Para outras instalações, o comando `painel-avisos backup -data /caminho/dados -out /caminho/backup.db` copia o banco com o servidor ligado; o destino não pode existir. Copie também `uploads/`. Para restaurar manualmente, pare o servidor, substitua banco e uploads, descarte WAL/SHM antigos, confira permissões e reinicie. Guarde cópias fora do servidor e teste a recuperação.
 
-Restaurar: `sudo ./restore.sh /opt/painel-avisos/backups/painel-AAAAMMDD-HHMMSS.db.gz [uploads-....tar.gz]`.
+## Atualização
 
-### Monitoramento no Zabbix
+1. Faça backup do banco e dos uploads; preserve seu `.env` e ajustes locais.
+2. Substitua os arquivos do projeto pela versão desejada e revise novas opções no `.env.example`.
+3. Se definiu `PAINEL_VERSION`, ajuste a tag. Execute `docker compose up -d --build` no mesmo diretório e com o mesmo nome de projeto (`-p painel-avisos` na instalação standalone acima).
+4. Confira `docker compose ps`, logs e `/healthz`, e teste uma TV.
 
-**Cenário web** (host da VM ou um host "avisos"):
+Os dados ficam no volume **`painel-avisos_painel-data`** usando o nome de projeto indicado. **Nunca use `docker compose down -v`**, pois apaga o volume. No Windows, substitua o binário e rode `install-server.ps1` novamente; os dados são preservados. Para atualizar o lançador da TV, execute novamente o instalador de quiosque com os mesmos parâmetros.
 
-- Configuração > Hosts > Web > Criar cenário, intervalo `1m`, 2 tentativas.
-- Passo 1: URL `https://avisos.protatic.qosit.cloud/healthz`, *Required string* `"ok":true`, *Required status codes* `200`, timeout `10s`.
-- Trigger: `last(/HOST/web.test.fail[Painel de Avisos])<>0` (ou `min(...,#3)>0` para evitar alarme falso).
-- Opcional: template *Website certificate by Zabbix agent 2* para acompanhar a validade do certificado.
-- Opcional na VM: `docker inspect -f '{{.State.Health.Status}}' painel-avisos` (UserParameter) deve retornar `healthy`.
+## Referência de variáveis de ambiente e flags
 
-Para alertar quando uma **TV** sai do ar, use o webhook de TV offline (Configurações), apontando para um endpoint público,
-ou para um IP privado com `WEBHOOK_ALLOW_PRIVATE=1`.
+Flags têm precedência sobre o ambiente. Nas opções com dois nomes de variável, `PAINEL_...` tem precedência sobre o nome curto.
 
-### Configurar a TV (quiosque) apontando para a internet
+| Flag | Variável de ambiente | Padrão / função |
+|---|---|---|
+| `-port` | `PAINEL_PORT` | `8080`, porta HTTP. |
+| `-bind` | `PAINEL_BIND` | Vazio, todas as interfaces. |
+| `-data` | `PAINEL_DATA` | Pasta `data` ao lado do executável; banco e uploads. Docker: `/data`. |
+| `-admin-password` | `PAINEL_ADMIN_PASSWORD` | Vazio gera senha, somente no primeiro uso. |
+| `-auto-register` | `PAINEL_AUTO_REGISTER` | `1`; `0` desativa cadastro automático de telas sem chave no modo legado. |
+| `-webhook` | `PAINEL_WEBHOOK_URL` | Vazio; se preenchido, sobrescreve a URL do painel ao iniciar. |
+| `-public-url` | `PAINEL_PUBLIC_URL` / `PUBLIC_URL` | Vazio; HTTPS ativa cookie Secure e padrões de modo público. Não habilita TLS no servidor. |
+| `-trust-proxy` | `PAINEL_TRUST_PROXY` / `TRUST_PROXY` | Vazio ignora cabeçalhos encaminhados; aceita IPs/CIDRs separados por vírgula. |
+| `-allow-keyless` | `PAINEL_ALLOW_KEYLESS` / `ALLOW_KEYLESS` | `auto`: aceita sem URL pública HTTPS, exige chave com HTTPS; `1`/`0` força. |
+| `-webhook-allow-private` | `PAINEL_WEBHOOK_ALLOW_PRIVATE` / `WEBHOOK_ALLOW_PRIVATE` | `auto`: permite redes privadas na LAN, bloqueia no modo público; `1`/`0` força. |
+| `-show-server-info` | `PAINEL_SHOW_SERVER_INFO` / `SHOW_SERVER_INFO` | `0`; `1` mostra detalhes técnicos só para admin. |
+| `-out` | — | Destino obrigatório do comando `backup`. |
 
-No PC da TV (Windows), com a pasta `deploy\windows`:
-```powershell
-.\install-tv-kiosk.ps1 -Url https://avisos.protatic.qosit.cloud -Screen tv-principal -Key tk_COLE_A_CHAVE_AQUI
-```
-- A chave fica no lançador `C:\PainelAvisos\tv-kiosk-<tela>.ps1`, com leitura restrita ao usuário, SYSTEM e Administradores.
-- O lançador espera o servidor até `-WaitSeconds` (120 s por padrão) e depois abre o Edge assim mesmo.
-  Sem internet, a TV abre pelo cache offline com o último aviso e volta sozinha quando a rede retornar.
-- Para **trocar a chave**: gere uma nova em *Telas* (a antiga para na hora) e rode o comando de novo com `-Key` novo.
+Comandos: `serve` (também padrão sem comando), `version`, `reset-admin` e `backup -out ARQUIVO`. `-h` exibe a ajuda. Loopback, link-local e metadados de nuvem continuam bloqueados para webhook mesmo permitindo redes privadas.
 
-### Iniciar sozinho com o Windows (tarefa agendada e logon automático)
+## Instalar a TV no Windows
 
-A tarefa `PainelAvisos-Kiosk-<tela>` substitui o atalho na pasta Inicializar. Ela abre o Edge na área de trabalho no logon, após 20 segundos, e reinicia o lançador se falhar. A tarefa precisa de uma sessão de usuário: para abrir após reiniciar sem intervenção, configure também logon automático.
+### Pelo painel (recomendado)
 
-No PowerShell **como administrador**, instale e configure o logon (a senha é solicitada sem exibição):
+_(em breve)_
+
+### Pelo script
+
+Requer Windows 10/11 64 bits, Microsoft Edge instalado, PowerShell e acesso ao servidor. Cadastre a tela no admin e copie a chave. Execute em uma sessão do usuário que exibirá a TV, na pasta `deploy\windows`:
 
 ```powershell
-.\install-tv-kiosk.ps1 -Url https://avisos.protatic.qosit.cloud -Screen tv-principal -Key tk_COLE_A_CHAVE_AQUI -AutoLogon
-# Ou configure apenas o logon, com o usuário atual como padrão:
-.\install-tv-kiosk.ps1 -AutoLogon -AutoLogonUser 'DOMINIO\usuario'
+Set-ExecutionPolicy -Scope Process Bypass -Force
+.\install-tv-kiosk.ps1 -ListMonitors
+.\install-tv-kiosk.ps1 -Url https://avisos.exemplo.com -Screen tv-principal -Key tk_SUA_CHAVE -Monitor 1
+# LAN: troque -Url por -Server 192.168.0.50:8080
+```
+
+`-Monitor` aceita o número mostrado por `-ListMonitors` ou `DISPLAYn`; sem ele, usa o principal. A numeração pode diferir das Configurações do Windows. Para várias telas no mesmo PC, execute uma vez por `-Screen`, cada qual com sua chave e monitor. Cada tela tem tarefa, perfil do Edge e lançador próprios.
+
+O script cria a tarefa agendada interativa `PainelAvisos-Kiosk-<tela>` no logon, abre o Edge em quiosque e o reabre se for fechado. O lançador fica em `C:\PainelAvisos\tv-kiosk-<tela>.ps1`; o log em `%LOCALAPPDATA%\PainelAvisos\tv-kiosk-<tela>.log`. É preciso entrar no Windows para a tarefa funcionar.
+
+```powershell
+# Logon automático: exige PowerShell como Administrador; solicita credenciais.
+.\install-tv-kiosk.ps1 -AutoLogon
+# Diagnóstico e remoção de uma tela (sem parâmetros de instalação):
 .\install-tv-kiosk.ps1 -Status -Screen tv-principal
 .\install-tv-kiosk.ps1 -Uninstall -Screen tv-principal
+# Desativar logon automático separadamente, como Administrador:
 .\install-tv-kiosk.ps1 -DisableAutoLogon
 ```
 
-`-AutoLogonPassword` aceita SecureString opcional. O instalador prefere o segredo LSA `DefaultPassword`; quando o LSA não puder ser usado, avisa e guarda a senha **em texto claro no registro**. Desativar remove a senha do registro e do LSA. Desinstalar uma tela mantém o logon automático.
+`-AutoLogon` pode acompanhar a instalação; `-AutoLogonUser DOMINIO\usuario` seleciona a conta. A senha é armazenada como segredo LSA. Remover uma tela mantém o logon automático; use `-DisableAutoLogon` para desativá-lo.
 
-`-AllUsers` exige administrador e permite disparar a tarefa no logon de qualquer usuário (grupo BUILTIN\Users). **A chave do quiosque no lançador fica legível por usuários locais.** O perfil do Edge e o log são próprios de cada usuário, resolvidos em tempo de execução. O log fica em `%LOCALAPPDATA%\PainelAvisos\tv-kiosk-<tela>.log`; `-Status` mostra o log do usuário atual e informa quando a consulta ao segredo LSA não tem permissão. `-NoStart` instala sem abrir agora. Reinstalar remove tarefas e atalhos antigos apenas da tela escolhida.
+Para iniciar no logon de qualquer usuário, acrescente `-AllUsers` à instalação e execute como Administrador. **Com `-AllUsers`, a chave no lançador fica legível por usuários locais.** Perfil e log continuam separados por usuário.
 
-Esta atualização muda funcionalmente apenas o script Windows; a VM não precisa ser atualizada.
+Se não iniciar, use `-Status`, confira a tarefa e o log, o Edge instalado e a conectividade. Para monitor errado, repita `-ListMonitors` e reinstale com o número correto. Para chave revogada, gere outra no painel e reinstale. Se o PC suspender, confira `deploy/windows/disable-sleep-screensaver.txt`; para retorno após falta de energia, configure a opção equivalente a “Power On” na BIOS/UEFI.
 
-### PC com vários monitores
+## Outras TVs
 
-1. Descubra o número de cada monitor. O comando abaixo lista os monitores e mostra o número em cada tela por 8 s:
-   ```powershell
-   .\install-tv-kiosk.ps1 -ListMonitors
-   ```
-   A lista traz o número, se é o principal, o dispositivo (`DISPLAY1`...), a resolução, a posição X,Y e a escala.
-2. Instale com `-Monitor <número>` (ou `-Monitor DISPLAY3`):
-   ```powershell
-   .\install-tv-kiosk.ps1 -Url https://avisos.protatic.qosit.cloud -Screen tv-principal -Key tk_COLE_A_CHAVE_AQUI -Monitor 3
-   ```
-3. Para duas TVs no mesmo PC, rode uma vez para cada tela, cada uma com sua chave e seu monitor:
-   ```powershell
-   .\install-tv-kiosk.ps1 -Url https://avisos.protatic.qosit.cloud -Screen tv-recepcao  -Key tk_CHAVE_1 -Monitor 2
-   .\install-tv-kiosk.ps1 -Url https://avisos.protatic.qosit.cloud -Screen tv-refeitorio -Key tk_CHAVE_2 -Monitor 3
-   ```
-   Cada tela tem seu lançador, tarefa agendada, perfil do Edge e log. Reinstalar uma não fecha a outra.
+Em Smart TV, Raspberry Pi, Linux ou navegador disponível no Chromecast/Fire TV, basta abrir `https://SEU_DOMINIO/tela?screen=<nome>&key=<chave>` em tela cheia. O navegador precisa suportar JavaScript e SSE; disponibilidade de navegador e recursos varia por dispositivo.
 
-Como funciona:
-- **Numeração:** é a ordem `DISPLAY1`, `DISPLAY2`... do Windows. Ela pode ser diferente do número de *Configurações > Tela*, por isso use o número que o `-ListMonitors` mostra na própria tela. Sem `-Monitor`, o quiosque abre no monitor principal, como antes.
-- **Na hora de abrir:** o lançador procura o monitor toda vez que abre o Edge, então uma troca de resolução ou de posição não atrapalha. Se o monitor não estiver conectado, abre no principal e registra no log.
-- **Posicionamento:** o Edge recebe `--window-position`/`--window-size`. Depois o lançador confere a janela e, se precisar, move e redimensiona para cobrir o monitor inteiro. Ele usa pixels físicos (DPI per-monitor), então monitores com escalas diferentes e monitores à esquerda ou acima do principal (posição negativa) funcionam.
-- **Verificação contínua:** a cada 30 s o lançador confere se a janela continua no monitor certo. Se um monitor for desligado e religado, a janela volta para ele.
-- **Log:** `C:\PainelAvisos\tv-kiosk-<tela>.log` mostra o monitor escolhido, a posição aplicada e os avisos.
+No Raspberry Pi/Linux, por exemplo:
 
----
-
-### Avisos urgentes
-
-Em **Configurações > Avisos urgentes**:
-
-| Opção | Padrão | O que faz |
-|---|---|---|
-| Como o aviso urgente aparece | Intercalar com os avisos normais | **Intercalar:** cada urgente fica o tempo abaixo na TV, depois passam os avisos normais uma vez e o urgente volta. **Fixo:** o urgente ocupa a TV até sair do ar (como na 1.1). |
-| Tempo do aviso urgente na tela | 60 s (10 a 600) | Quanto tempo cada urgente fica na TV antes dos avisos normais. |
-| Tocar alerta sonoro em avisos urgentes | ligado | Liga ou desliga o som do urgente. |
-| Repetir o alerta a cada 10 segundos | ligado | Repete o alerta enquanto o urgente está na TV. No modo fixo, repete só durante o tempo do urgente. |
-
-Exemplo com 1 urgente e 3 normais (padrões): urgente 60 s (6 alertas) → normal 1 (15 s) → normal 2 (15 s) → normal 3 (15 s) → urgente 60 s → …
-
-- **Vários urgentes:** passam um depois do outro, cada um pelo seu tempo, antes dos normais.
-- **Sem avisos normais:** o urgente fica direto na tela e o alerta recomeça a cada 60 s.
-- **Urgente novo ou editado:** aparece na hora, interrompendo o aviso normal que estiver na TV.
-- **Se a TV for reaberta ou recarregada:** continua do ponto em que estava. O urgente não recomeça do zero e não é pulado.
-
-## Uso pelo líder
-
-1. **Avisos > Novo comunicado**: título, texto (botões **N** / *I* / S / • Lista), prioridade, início/fim
-   (atalhos *1 h*, *4 h*, *até o fim do dia*, *1 semana*), telas e imagem opcional. Depois, **Publicar agora**.
-2. As listas **Ativos / Agendados / Histórico** mostram autor, período, telas, edição e encerramento.
-   Os botões são **Editar**, **Encerrar** (sai da TV na hora) e **Duplicar**.
-3. **Telas** (admin):
-   - status online e endereço de cada TV;
-   - **Gerar/Nova chave**: mostra a chave e o endereço completo uma única vez;
-   - **Revogar chave**: a TV mostra "Tela não autorizada".
-4. **Minha conta**: trocar a senha e **ativar o 2FA** (escaneie o QR code e confirme com o código).
-5. **Usuários** (admin): criar líderes, desativar, trocar senha e **Resetar 2FA** (para quem perdeu o celular).
-6. **Integrações** (admin): códigos de acesso para outros sistemas publicarem avisos (veja abaixo).
-
-## Configuração (linha de comando / ambiente)
-
-| Opção | Variável | Padrão | Descrição |
-|---|---|---|---|
-| `-port` | `PAINEL_PORT` | `8080` | Porta HTTP |
-| `-bind` | `PAINEL_BIND` | (todas) | IP de escuta (`0.0.0.0` no Docker; `127.0.0.1` para só local) |
-| `-data` | `PAINEL_DATA` | `data` ao lado do binário | Banco, imagens e log |
-| `-public-url` | `PAINEL_PUBLIC_URL` ou `PUBLIC_URL` | vazio | URL pública. Se `https://`, ativa o **modo público** (cookie `Secure`, chave obrigatória, webhook sem IP privado) |
-| `-trust-proxy` | `PAINEL_TRUST_PROXY` ou `TRUST_PROXY` | vazio | CIDRs de proxies confiáveis para `X-Forwarded-For/Proto`. Vazio = cabeçalhos ignorados |
-| `-allow-keyless` | `PAINEL_ALLOW_KEYLESS` | `auto` | TVs sem chave: `auto` = aceitas sem `PUBLIC_URL` https e bloqueadas com ela; `1` ou `0` força |
-| `-webhook-allow-private` | `PAINEL_WEBHOOK_ALLOW_PRIVATE` | `auto` | Webhook para IP privado: `auto` = permitido na LAN e bloqueado no modo público |
-| `-admin-password` | `PAINEL_ADMIN_PASSWORD` | gerada | Senha do `admin` só no primeiro uso. Se gerada, aparece no console e nunca no log |
-| `-auto-register` | `PAINEL_AUTO_REGISTER` | `1` | Cadastra TVs novas **sem chave** (só vale com telas sem chave permitidas) |
-| `-webhook` | `PAINEL_WEBHOOK_URL` | vazio | URL do webhook de TV offline |
-| `-show-server-info` | `PAINEL_SHOW_SERVER_INFO` | `0` | `1` = "Detalhes técnicos" em Configurações (só admin). Sempre disponível no log de inicialização (linha `modo:`) |
-
-Comandos:
-
-- `painel-avisos reset-admin` gera uma nova senha do admin e remove o 2FA dele;
-- `painel-avisos backup -out ARQ` faz uma cópia consistente do banco;
-- `painel-avisos version`.
-
-Loopback, link-local e metadados de nuvem ficam **sempre** bloqueados para o webhook, em qualquer modo.
-
-## Webhook de TV offline
-
-Quando uma TV fica sem sinal além do limite (2 min por padrão), o servidor faz `POST` JSON, com 3 tentativas:
-```json
-{"event":"screen_offline","screen":"tv-principal","label":"TV principal","lastSeen":"2026-10-20T08:57:06-03:00","offlineSeconds":206,"source":"painel-avisos"}
-```
-Na volta, envia `"event":"screen_online"`. *Testar webhook* envia `"event":"test"`.
-A URL é validada ao salvar, e o IP é checado de novo a cada conexão e redirecionamento (anti-SSRF / DNS rebinding).
-
-## API para integrações
-
-Gere um código de acesso (token) em **Integrações** (só admin). Ele aparece uma vez e só o hash é guardado.
-Com a restrição por IP ativa, `/api/v1` também fica restrito.
 ```bash
-curl -X POST https://avisos.protatic.qosit.cloud/api/v1/announcements \
-  -H "Authorization: Bearer pa_SEU_TOKEN" -H "Content-Type: application/json" \
-  -d '{"title":"Servidor fora do ar","body":"TI já está atuando.","priority":"urgent","durationMinutes":30}'
-curl -H "Authorization: Bearer pa_SEU_TOKEN" "https://avisos.protatic.qosit.cloud/api/v1/announcements?view=active"
-curl -X POST -H "Authorization: Bearer pa_SEU_TOKEN" https://avisos.protatic.qosit.cloud/api/v1/announcements/42/end
-curl -H "Authorization: Bearer pa_SEU_TOKEN" https://avisos.protatic.qosit.cloud/api/v1/screens
+chromium-browser --kiosk --autoplay-policy=no-user-gesture-required "URL"
 ```
-Campos do `POST`:
 
-| Campo | Descrição |
-|---|---|
-| `title` | Obrigatório, até 120 caracteres |
-| `body` | Até 3000 caracteres |
-| `priority` | `normal` ou `urgent` |
-| `startsAt` | Unix em segundos; `0` = agora |
-| `endsAt` | Unix em segundos, ou `null` = até encerrar |
-| `durationMinutes` | Alternativa ao `endsAt` |
-| `allScreens` | Todas as telas |
-| `screens` | Lista de telas, ex.: `["tv-principal"]` |
-| `image` | Caminho `/uploads/...` de uma imagem já enviada |
+Adicione o comando ao autostart da sessão gráfica para abrir ao entrar no sistema. O nome do executável pode ser `chromium` na sua distribuição. **O som exige o flag de autoplay ou um clique na página**, conforme a política do navegador.
 
-Respostas: `201` criado, `400` validação, `401` token.
+## Avisos urgentes
 
-**Endpoints das TVs**: exigem `screen` mais a chave, no parâmetro `key=` ou no cabeçalho `X-Screen-Key`.
+Em **Configurações > Avisos urgentes**, ajuste as três opções do ciclo:
 
-- `GET /tela`
-- `GET /api/screen/events` (SSE)
-- `GET /api/screen/state`
-- `POST /api/screen/heartbeat`
-- `GET /uploads/...`
+1. **Modo:** intercalar com avisos normais (padrão) ou fixar na tela até sair do ar.
+2. **Tempo do urgente:** 10 a 600 segundos, padrão 60.
+3. **Repetir alerta a cada 10 segundos:** ligado por padrão; há também o controle geral para ligar/desligar o som.
 
-`GET /healthz` é público.
+No padrão: urgente por 60 s com alertas → cada aviso normal uma vez (15 s por padrão) → urgente novamente. Vários urgentes passam em sequência antes dos normais. Sem normais, o urgente permanece e renova o período de alerta. No modo fixo, os normais ficam suspensos e a repetição sonora ocorre só durante o período inicial configurado. Urgente novo ou editado interrompe imediatamente o aviso normal.
+
+## API com token
+
+Gere um token em **Integrações** como admin e guarde-o: ele aparece uma única vez. A restrição administrativa por IP também abrange esta API.
+
+```bash
+curl -X POST https://avisos.exemplo.com/api/v1/announcements \
+  -H 'Authorization: Bearer pa_SEU_TOKEN' -H 'Content-Type: application/json' \
+  -d '{"title":"Manutenção","body":"Equipe atuando.","priority":"urgent","durationMinutes":30}'
+curl -H 'Authorization: Bearer pa_SEU_TOKEN' 'https://avisos.exemplo.com/api/v1/announcements?view=active'
+curl -X POST -H 'Authorization: Bearer pa_SEU_TOKEN' https://avisos.exemplo.com/api/v1/announcements/42/end
+curl -H 'Authorization: Bearer pa_SEU_TOKEN' https://avisos.exemplo.com/api/v1/screens
+```
+
+`title` é obrigatório (até 120 caracteres), `body` aceita até 3000 e `priority` aceita `normal`/`urgent`. `startsAt` e `endsAt` usam segundos Unix; `durationMinutes` é alternativa ao fim explícito. Sem fim, permanece até encerrar. Para selecionar telas, use `allScreens:false` e `screens:["tv-principal"]`; sem seleção, o padrão é todas. `image` aceita um caminho `/uploads/...` já enviado pelo painel.
+
+## Integração com monitoramento (Zabbix)
+
+Configure uma ação/media type que faça o POST da API no evento de problema e guarde o ID retornado para encerrar no evento de recuperação. Use token dedicado, duração de segurança e permita o IP de saída do monitoramento no overlay administrativo. Monitore também `/healthz`. O webhook configurado no painel avisa quando uma TV fica offline e quando volta; destinos privados dependem de `WEBHOOK_ALLOW_PRIVATE`.
+
+## Segurança
+
+Senhas usam bcrypt; sessões, tokens e chaves de TV são guardados como hash. Há 2FA opcional, limitação de tentativas de login, proteção CSRF, CSP e uploads protegidos por sessão ou chave. Em HTTPS, os cookies são Secure e há HSTS; confie apenas nos proxies necessários. O webhook valida destinos a cada conexão e redirecionamento contra SSRF. Proteja banco e backups, que contêm segredos TOTP. Chaves nas URLs podem aparecer em logs do proxy: restrinja o acesso a esses registros. Exija chaves na LAN e mantenha o admin restrito quando possível.
 
 ## Solução de problemas
 
-| Problema | O que fazer |
+| Sintoma | Verificação |
 |---|---|
-| TV mostra **"Tela não autorizada"** | A chave está errada ou foi revogada/regenerada. Gere uma nova em *Telas* e reconfigure o quiosque com `-Key`. |
-| Traefik responde **404** | Logo após o start é normal (espere ~10 s até ficar healthy). Se continuar: `DOMAIN` ou `TRAEFIK_ENTRYPOINT` errados, ou o container não está na rede `TRAEFIK_NETWORK` (`docker inspect painel-avisos`). Veja os logs do Traefik. |
-| Traefik responde **502/504** | O container não está na mesma rede que o Traefik, ou a label `traefik.docker.network` está errada. |
-| Certificado inválido ou "TRAEFIK DEFAULT CERT" | `TRAEFIK_CERTRESOLVER` errado, DNS ainda não propagado ou porta 80/443 não chega ao Traefik (desafio ACME). Veja os logs do Traefik (`acme`). |
-| Avisos só chegam com atraso ou ao recarregar | Há `compress` no router ou entrypoint: exclua `text/event-stream` (veja "SSE e compressão"). |
-| Login em loop atrás do Traefik | Com `PUBLIC_URL` https, o cookie é `Secure`: acesse sempre por **https**. |
-| Painel mostra IP do Traefik em vez do cliente | Ajuste `TRUST_PROXY` para a sub-rede da rede do Traefik. |
-| **403** no `/admin` | Restrição por IP ativa e seu IP fora de `ADMIN_ALLOWED_IPS`. |
-| Perdeu o 2FA | Outro admin usa *Usuários > Resetar 2FA*. Se for o único admin: `docker compose exec painel-avisos painel-avisos reset-admin` (ou o `.exe` no Windows). |
-| Webhook "destino bloqueado" | O destino é IP interno/loopback/metadados. Na LAN use `WEBHOOK_ALLOW_PRIVATE=1` (loopback e metadados continuam bloqueados). |
-| LAN: líder não abre o painel | Firewall ou rede **Pública**: `install-server.ps1 -AllProfiles`, ou mude a rede para Privada. Teste com `Test-NetConnection 192.168.1.195 -Port 8080`. |
-| TV sem som no urgente | Abra o Edge pelo lançador do quiosque (flag `--autoplay-policy=no-user-gesture-required`) e confira o volume. Um 🔇 no topo indica som bloqueado: um clique libera. |
-| TV apaga ou entra em descanso | Rode `install-tv-kiosk.ps1` de novo e veja `disable-sleep-screensaver.txt`. |
+| Tela não autorizada | Chave incorreta/revogada: gere outra e atualize a URL/instalação. |
+| Traefik 404 ou 502 | Estado saudável, domínio, entrypoint e rede compartilhada; consulte logs. |
+| Certificado inválido | DNS, portas ACME e certresolver. |
+| Atualização atrasada | Exclua `text/event-stream` da compressão e desative buffering. |
+| Login em loop | Acesse por HTTPS quando a URL pública usar HTTPS; confira `TRUST_PROXY`. |
+| Admin retorna 403 | Inclua seu IP em `ADMIN_ALLOWED_IPS`. |
+| Sem som | Confira volume, flag de autoplay ou clique na página. |
+| LAN inacessível | Confira firewall, perfil Privado/Domínio e porta 8080. |
+| Webhook bloqueado | Revise destino e permissão de redes privadas; loopback/metadados seguem bloqueados. |
 
-## Segurança (resumo)
+## Testes e desenvolvimento
 
-- Senhas com **bcrypt**. Sessões, tokens de API e chaves de tela guardados só como **SHA-256**. Segredo TOTP no banco (proteja os backups).
-- Cookie `HttpOnly` + `SameSite=Strict` + `Secure` (em HTTPS). Cabeçalho anti-CSRF obrigatório nas alterações.
-- Limite de login por IP real: 8 erros em 10 min bloqueiam aquele IP.
-- CSP estrita sem `unsafe-inline`, HSTS, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer` (a chave da TV não vaza em Referer) e `Permissions-Policy`.
-- Texto dos avisos escapado no servidor. Uploads validados pelo conteúdo (só imagens, até 8 MB).
-- Webhook com proteção SSRF na conexão, em todos os modos, e sem uso de proxy do ambiente.
-- A chave da TV vai na URL, então pode aparecer no **access log do Traefik**. Restrinja o acesso a esses logs ou desative `accesslog` para esse router, se necessário.
+Requer Go 1.26+. SQLite usa `modernc.org/sqlite`, sem CGO; o front-end em `web/` é embutido no binário.
 
-## Testes (o que foi validado)
+```bash
+./build.sh                         # gera binários Windows/Linux amd64 em dist/
+go vet ./...
+go test ./...
+python3 tests/smoke_test.py dist/painel-avisos-linux-amd64
+```
 
-- `go test ./...`: tabela de IPs bloqueados, bloqueio no dial (loopback e `localhost`), redirecionamento para loopback e metadados, parsing de `X-Forwarded-*` e vetores TOTP do RFC 6238.
-- `tests/smoke_test.py`: sobe um servidor público e um LAN e roda 63 verificações (chaves, revogação, uploads, Secure/HSTS via proxy simulado, CSP, SSRF, TOTP, rate limit por IP real, SSE, agendamento, webhook LAN).
-- `tests/browser_test.mjs`: Chrome headless (zero violações de CSP com controle positivo, imagens com chave, service worker offline, revogação ao vivo, telas não autorizadas, varredura de jargão técnico nas abas do admin, "Detalhes técnicos" só com `SHOW_SERVER_INFO=1`) e as screenshots.
-- `tests/urgent_test.mjs`: sequência do urgente intercalado no Chrome headless com relógio simulado (tempos reais de 60 s/15 s), com contagem de bipes, vários urgentes, só urgente, modo fixo, urgente novo/editado, TV reaberta, som desligado, TV com tela antiga e recarga automática após atualizar o servidor. Usa `playwright-core`.
-- `tests/kiosk_autostart_test.ps1`: tarefas agendadas, logon automático, diagnóstico e remoção por tela, com mocks (`pwsh -NoProfile -File tests/kiosk_autostart_test.ps1`).
-- `tests/kiosk_monitor_test.ps1`: seleção de monitor, posicionamento da janela e lançador gerado do quiosque, com a API do Windows simulada (`pwsh -NoProfile -File tests/kiosk_monitor_test.ps1`). Não substitui um teste num Windows real com vários monitores.
-- `tests/traefik_test.py`: ponta a ponta via Traefik real (v3.5 e v2.11) com 9 verificações (o container de teste usa `SHOW_SERVER_INFO=1` para conferir o IP visto). Os resultados estão em `tests/results/` (rodados na v1.1.0; a 1.1.1 não muda nada da camada de rede).
+Em `tests/`, `browser_test.mjs` usa `puppeteer-core` e Chrome para interface, CSP e offline; `urgent_test.mjs` usa `playwright-core` para o ciclo urgente; `traefik_test.py` exercita o proxy real com Docker. Consulte os cabeçalhos dos scripts para parâmetros e dependências. `kiosk_autostart_test.ps1` e `kiosk_monitor_test.ps1` rodam com `pwsh -NoProfile -File tests/NOME.ps1` e mocks; não substituem validação em Windows real. Os resultados históricos ficam em `tests/results/` e `tests/*_result.txt`. `dist/` é gerado localmente e ignorado pelo Git.
 
-## Desenvolvimento
+Histórico de versões: [CHANGELOG.md](CHANGELOG.md).
 
-Go 1.26+, `modernc.org/sqlite` (sem CGO), front-end em HTML/CSS/JS puro embutido (`web/`) e QR via `github.com/skip2/go-qrcode`.
+## Licença
 
-- `./build.sh` gera `dist/painel-avisos.exe` (windows/amd64) e `dist/painel-avisos-linux-amd64`.
-- Testes: `go test ./...`, `python3 tests/smoke_test.py dist/painel-avisos-linux-amd64` e o `browser_test.mjs` (na pasta com `puppeteer-core`).
+**TODO: Defina a licença do projeto.**

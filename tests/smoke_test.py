@@ -243,7 +243,7 @@ try:
     check("Chave revogada: conexão derrubada e tela rejeitada com/sem chave", sse3.closed_at is not None and s1 in (401, 403) and s2 == 401, f"com chave={s1} sem chave={s2}")
 
     section("Webhook: proteção contra SSRF (modo público)")
-    blocked = ["http://127.0.0.1:9999/x", "http://localhost:9999/x", "http://10.60.20.10/x", "http://172.17.0.1/x", "http://192.168.1.195/x",
+    blocked = ["http://127.0.0.1:9999/x", "http://localhost:9999/x", "http://10.0.0.10/x", "http://172.17.0.1/x", "http://192.168.0.50/x",
                "http://169.254.169.254/latest/meta-data/", "http://100.64.0.1/x", "http://0.0.0.0/x", "http://[::1]:9999/x", "http://[fd00:ec2::254]/x",
                "http://[::ffff:127.0.0.1]/x", "http://[fe80::1]/x", "ftp://example.com/x", "file:///etc/passwd", "http://user:pw@example.com/x"]
     bad = [u for u in blocked if adm.req("PUT", "/api/admin/settings", {"webhook_url": u})[0] != 400]

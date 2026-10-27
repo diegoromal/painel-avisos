@@ -91,3 +91,21 @@ details.tech dl{display:grid;grid-template-columns:max-content 1fr;gap:.25rem .9
 details.tech dt{font-weight:600}details.tech dd{margin:0;word-break:break-all}
 details.tech pre{margin:.6rem 0 .2rem}
 .app-foot{text-align:center;color:var(--muted);font-size:.75rem;padding:1.2rem 0 1.6rem;opacity:.75}
+
+.install-overlay{position:fixed;inset:0;background:#0009;z-index:1000;display:flex;align-items:center;justify-content:center;padding:1rem}
+.install-overlay[hidden]{display:none}
+.install-dialog{background:#fff;width:720px;max-width:100%;max-height:94vh;overflow-y:auto;margin:0;padding:1.5rem;box-shadow:0 12px 48px #0005;border-top:5px solid #318FD3}
+.install-dialog h3{margin-top:1.4rem}.install-dialog label{display:block;margin:.8rem 0 .4rem}
+.install-dialog pre{white-space:pre-wrap;overflow-wrap:anywhere}.install-dialog code{font-size:.85rem}
+.install-dialog input[type=number]{max-width:10rem}.install-dialog input[type=text]{width:100%}
+@media(max-width:600px){.install-overlay{padding:.4rem}.install-dialog{padding:1rem;max-height:98vh}}
+.install-dialog .keybox{background:#eff7fd;color:var(--fg);border:1px solid #b4d8f1}
+.install-dialog .btn:not(.ghost){background:#318FD3;color:#fff}
+.install-dialog .btn:disabled{opacity:.5;cursor:not-allowed}
+.install-dialog .notice{background:#eff7fd;border-color:#b4d8f1;color:#164c73}
+.install-dialog p{margin:.45rem 0}.install-dialog h3{margin:1rem 0 .4rem;color:#164c73}
+.install-dialog label.radio{display:flex;align-items:flex-start;gap:.5rem;margin:.7rem 0}
+.install-dialog label.radio input{margin-top:.2rem;flex:none}
+.install-dialog a{color:#318FD3;font-weight:600}
+.install-dialog pre.keybox{margin:.4rem 0 .3rem;padding:.55rem .7rem}
+.install-dialog .btn+pre,.install-dialog p+pre{margin-top:.6rem}

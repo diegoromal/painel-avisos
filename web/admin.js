@@ -6,11 +6,14 @@
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   let me = null, info = {}, screens = [], view = "active", annCache = {};
   const tvUrl = (name, key) => `${location.origin}/tela?screen=${encodeURIComponent(name)}&key=${encodeURIComponent(key)}`;
+  const sessionKeys = new Map();
   function showKey(name, key) {
+    sessionKeys.set(name, key);
     const box = $("#key-new"); box.hidden = false;
     box.innerHTML = `<div class="keybox"><b>Endereço da TV "${esc(name)}". Copie agora: ele não será exibido novamente.</b>
       <code id="key-url">${esc(tvUrl(name, key))}</code>Somente a chave (para o instalador da TV):<code id="key-only">${esc(key)}</code>
-      <button class="btn sm" type="button" id="copy-url">Copiar endereço</button> <button class="btn sm ghost" type="button" id="close-key">Fechar</button></div>`;
+      <button class="btn sm" type="button" id="copy-url">Copiar endereço</button> <button class="btn sm" type="button" id="install-key-button">Instalar na TV</button> <button class="btn sm ghost" type="button" id="close-key">Fechar</button></div>`;
+    $("#install-key-button").addEventListener("click", async () => { await loadScreens(); openInstall(screens.find(s => s.name === name)); });
     $("#copy-url").onclick = () => copyText(tvUrl(name, key));
     $("#close-key").onclick = () => { box.hidden = true; box.innerHTML = ""; };
   }
@@ -54,7 +57,7 @@
   const fromLocalInput = (v) => v ? Math.floor(new Date(v).getTime() / 1000) : 0;
 
   // ---------- login ----------
-  function showLogin() { $("#app").hidden = true; $("#login").hidden = false; }
+  function showLogin() { sessionKeys.clear(); installModal.hidden = true; $("#key-new").hidden = true; $("#key-new").textContent = ""; $("#app").hidden = true; $("#login").hidden = false; }
   $("#login-form").addEventListener("submit", async (e) => {
     e.preventDefault();
     const f = e.target; $("#login-error").textContent = "";
@@ -208,6 +211,71 @@
     } catch (err) { $("#form-error").textContent = err.message; }
   });
 
+  // Instalação no Windows: os valores só entram nos comandos após validação.
+  const installModal = $("#install-modal");
+  const keyPattern = /^tk_[A-Za-z0-9_-]{8,128}$/;
+  let installScreen, installReturnFocus, installLine = "", installBase = "";
+  function closeInstall() { installModal.hidden = true; installReturnFocus?.focus(); }
+  function openInstall(screen) {
+    if (!screen || me.role !== "admin") return;
+    installScreen = screen; installReturnFocus = document.activeElement;
+    $("#install-title").textContent = "Instalar na TV: " + (screen.label || screen.name);
+    $("#install-monitor").value = ""; $("#install-autologon").checked = false;
+    $("#install-key").value = sessionKeys.get(screen.name) || "";
+    installModal.hidden = false; updateInstall(); $(".install-dialog", installModal).focus();
+  }
+  function updateInstall() {
+    const name = installScreen.name, key = $("#install-key").value;
+    const monitor = $("#install-monitor").value;
+    installBase = info.baseUrl || location.origin;
+    const validBase = /^https?:\/\/[A-Za-z0-9.\-\[\]:]+$/.test(installBase);
+    const validName = /^[a-z0-9][a-z0-9_-]{0,39}$/.test(name);
+    const validMonitor = monitor === "" || (/^[0-9]+$/.test(monitor) && Number(monitor) >= 1 && Number(monitor) <= 99);
+    const validKey = keyPattern.test(key);
+    $("#install-key").setCustomValidity(key && !validKey ? "Cole uma chave válida." : "");
+    $("#install-old-key").hidden = validKey;
+    $("#install-error").textContent = !validBase || !validName ? "O endereço ou a identificação da tela não é válido." : !validMonitor ? "Escolha um monitor de 1 a 99." : key && !validKey ? "Cole uma chave válida." : "";
+    $("#install-fetch").textContent = validBase ? `Invoke-WebRequest -UseBasicParsing "${installBase}/install/tv-kiosk.ps1" -OutFile install-tv-kiosk.ps1` : "";
+    $("#install-monitors").textContent = 'powershell -ExecutionPolicy Bypass -File .\\install-tv-kiosk.ps1 -ListMonitors';
+    installLine = validBase && validName && validMonitor ? `powershell -ExecutionPolicy Bypass -File .\\install-tv-kiosk.ps1 -Url "${installBase}" -Screen "${name}" -Key "${validKey ? key : "tk_COLE_A_CHAVE_AQUI"}"` + (monitor ? ` -Monitor ${Number(monitor)}` : "") + ($("#install-autologon").checked ? " -AutoLogon" : "") : "";
+    $("#install-command").textContent = installLine;
+    $("#install-bat").disabled = !installLine || !validKey;
+    $("#install-status").textContent = validName ? `.\\install-tv-kiosk.ps1 -Status -Screen ${name}` : "";
+    $("#install-remove").textContent = validName ? `-Uninstall -Screen ${name}` : "";
+  }
+  for (const id of ["install-monitor", "install-autologon", "install-key"]) {
+    for (const event of ["input", "change"]) $("#" + id).addEventListener(event, updateInstall);
+  }
+  $("#install-close").addEventListener("click", closeInstall);
+  installModal.addEventListener("click", e => { if (e.target === installModal) closeInstall(); });
+  installModal.addEventListener("keydown", e => {
+    if (e.key === "Escape") { e.preventDefault(); closeInstall(); }
+    if (e.key === "Tab") {
+      const items = $$("button:not(:disabled), input, a", installModal).filter(el => !el.hidden);
+      const first = items[0], last = items[items.length - 1];
+      if (e.shiftKey && (document.activeElement === first || document.activeElement.classList.contains("install-dialog"))) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+  });
+  $$("[data-copy-install]").forEach(b => b.addEventListener("click", () => copyText($("#" + b.dataset.copyInstall).textContent)));
+  $("#install-new-key").addEventListener("click", async () => {
+    if (installScreen.hasKey && !confirm("A chave atual deixa de funcionar na hora e a TV que a usa precisa ser reconfigurada. Continuar?")) return;
+    try {
+      const r = await api("POST", `/api/admin/screens/${installScreen.id}/key`);
+      sessionKeys.set(r.screen, r.key); installScreen.hasKey = true;
+      $("#install-key").value = r.key; updateInstall(); await loadScreens();
+    } catch (err) { $("#install-error").textContent = err.message; }
+  });
+  $("#install-bat").addEventListener("click", () => {
+    updateInstall(); if ($("#install-bat").disabled) return;
+    const lines = ["@echo off", 'cd /d "%~dp0"', "echo Instalando o painel na TV...",
+      `powershell -NoProfile -ExecutionPolicy Bypass -Command "Invoke-WebRequest -UseBasicParsing '${installBase}/install/tv-kiosk.ps1' -OutFile 'install-tv-kiosk.ps1'"`,
+      "if errorlevel 1 (echo Falha ao baixar o instalador & pause & exit /b 1)", installLine, "pause", ""];
+    const url = URL.createObjectURL(new Blob([lines.join("\r\n")], { type: "application/octet-stream" }));
+    const a = document.createElement("a"); a.href = url; a.download = `instalar-tv-${installScreen.name}.bat`;
+    document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+  });
+
   // ---------- telas ----------
   async function loadScreens() {
     screens = await api("GET", "/api/admin/screens");
@@ -218,19 +286,20 @@
       (screens.map(s => `<tr><td title="${esc(s.lastIp ? "Último endereço: " + s.lastIp : "")}"><span class="dot ${s.online ? "on" : "off"}"></span>${s.online ? "Online" : "Offline"}</td>
         <td>${esc(s.label)}</td><td><code>${esc(s.name)}</code></td><td title="${fmt(s.lastSeen)}">${ago(s.lastSeen)}</td>
         <td>${s.hasKey ? `<span class="key-ok" title="Início da chave: ${esc(s.keyPrefix)}…">🔑 Configurada</span> <span class="muted small">desde ${fmt(s.keyCreatedAt)}</span>` : `<span class="key-none">Sem chave</span>`}</td>
-        ${adm ? `<td><button class="btn sm" data-newkey="${s.id}">${s.hasKey ? "Nova chave" : "Gerar chave"}</button> ${s.hasKey ? `<button class="btn sm ghost" data-revoke="${s.id}">Revogar chave</button>` : ""}
+        ${adm ? `<td><button class="btn sm" data-newkey="${s.id}">${s.hasKey ? "Nova chave" : "Gerar chave"}</button> <button class="btn sm" data-install="${s.id}">Instalar na TV</button> ${s.hasKey ? `<button class="btn sm ghost" data-revoke="${s.id}">Revogar chave</button>` : ""}
           <button class="btn sm" data-rename="${s.id}">Renomear</button> <button class="btn sm danger" data-del="${s.id}">Remover</button></td>` : ""}</tr>`).join("") ||
         `<tr><td colspan="6" class="empty">Nenhuma tela cadastrada. Adicione a primeira abaixo.</td></tr>`);
   }
   $("#screens-table").addEventListener("click", async (e) => {
     const b = e.target.closest("button"); if (!b) return;
-    const s = screens.find(x => x.id == (b.dataset.rename || b.dataset.del || b.dataset.newkey || b.dataset.revoke));
+    const s = screens.find(x => x.id == (b.dataset.rename || b.dataset.del || b.dataset.newkey || b.dataset.revoke || b.dataset.install));
+    if (b.dataset.install) { openInstall(s); return; }
     if (b.dataset.newkey) {
       if (s.hasKey && !confirm(`Gerar nova chave para "${s.label || s.name}"? A chave atual para de funcionar na hora e a TV precisa ser reconfigurada com o novo endereço.`)) return;
       const r = await api("POST", `/api/admin/screens/${s.id}/key`); showKey(r.screen, r.key);
     }
     if (b.dataset.revoke && confirm(`Revogar a chave de "${s.label || s.name}"? A TV deixa de receber avisos.`)) {
-      const r = await api("DELETE", `/api/admin/screens/${s.id}/key`); toast(r.note);
+      const r = await api("DELETE", `/api/admin/screens/${s.id}/key`); sessionKeys.delete(s.name); toast(r.note);
     }
     if (b.dataset.rename) { const l = prompt("Nome exibido da tela:", s.label); if (l != null) await api("PUT", "/api/admin/screens/" + s.id, { label: l }); }
     if (b.dataset.del && confirm(`Remover a tela "${s.label || s.name}"? Ela deixa de receber avisos.`)) await api("DELETE", "/api/admin/screens/" + s.id);

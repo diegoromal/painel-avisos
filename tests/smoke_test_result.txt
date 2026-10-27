@@ -6,7 +6,10 @@ PASS Login correto atrás do proxy
 PASS Cookie de sessão com Secure + HttpOnly + SameSite=Strict — Path=/; Max-Age=43200; HttpOnly; Secure; SameSite=Strict
 PASS HSTS enviado quando X-Forwarded-Proto=https vem do proxy confiável — max-age=31536000
 PASS Sem X-Forwarded-Proto: sem HSTS
-PASS SHOW_SERVER_INFO=1: admin recebe detalhes técnicos — versão=1.2.1
+PASS Instalador público sem sessão: conteúdo idêntico e attachment
+PASS Instalador identifica monitores e não contém chave
+PASS URL base pública no info
+PASS SHOW_SERVER_INFO=1: admin recebe detalhes técnicos — versão=1.3.0
 PASS IP real do cliente lido do X-Forwarded-For (proxy confiável) — clientIp=203.0.113.50 https=True
 PASS Modo público: telas sem chave bloqueadas e webhook sem redes privadas
 PASS Auditoria registra o IP real do login
@@ -19,7 +22,7 @@ PASS CSP estrita + XFO DENY + nosniff + Referrer/Permissions-Policy em /healthz
 PASS CSP estrita + XFO DENY + nosniff + Referrer/Permissions-Policy em /static/admin.js
 
 ## Chaves por tela
-PASS Criar tela devolve chave uma única vez — tk_S6HL…
+PASS Criar tela devolve chave uma única vez — tk_SKjr…
 PASS Banco guarda só o hash SHA-256 da chave
 PASS Listagem não expõe a chave (só prefixo)
 PASS sem chave: state/heartbeat/events/tela → 401 — 401/401/401/401
@@ -32,9 +35,9 @@ PASS Modo público: tela desconhecida sem chave é recusada e NÃO é cadastrada
 ## Tempo real (SSE) com chave
 PASS SSE com chave válida conecta
 PASS Aviso normal chega à TV em < 1 s — 2 ms
-PASS Aviso URGENTE chega em < 1 s e vem primeiro — 2 ms
+PASS Aviso URGENTE chega em < 1 s e vem primeiro — 1 ms
 PASS Aviso segmentado: chega na tela alvo e não na outra
-PASS Agendado: servidor empurra no horário de início — 204 ms após o início
+PASS Agendado: servidor empurra no horário de início — 203 ms após o início
 PASS Expiração: servidor empurra estado sem o aviso — 203 ms após o fim
 PASS Encerrar remove o aviso da TV em < 1 s
 
@@ -58,7 +61,7 @@ PASS 15 destinos internos/metadados/esquemas inválidos recusados ao salvar — 
 PASS Checagem no momento da conexão: webhook já gravado apontando p/ loopback é bloqueado e nada é entregue — endereço bloqueado por segurança: ele aponta para uma rede interna ou reservada
 
 ## 2FA (TOTP)
-PASS SHOW_SERVER_INFO=1: líder (não admin) NÃO recebe detalhes técnicos — {"showServerInfo": false, "version": "1.2.1"}
+PASS SHOW_SERVER_INFO=1: líder (não admin) NÃO recebe detalhes técnicos — {"baseUrl": "https://avisos.teste.local", "showServerInfo": false, "version": "1.3.0"}
 PASS Setup 2FA devolve segredo, URI otpauth e QR (PNG)
 PASS Código errado não ativa o 2FA
 PASS Código correto ativa o 2FA
@@ -78,12 +81,14 @@ PASS Sem token → 401
 PASS Senhas em bcrypt e tokens só como hash
 
 ## Modo LAN (compatibilidade)
-PASS Padrão (SHOW_SERVER_INFO=0): /api/admin/info só expõe versão — sem modo, proxies, IP ou URL — {"showServerInfo": false, "version": "1.2.1"}
+PASS Instalador público sem sessão: conteúdo idêntico e attachment
+PASS Instalador identifica monitores e não contém chave
+PASS Padrão (SHOW_SERVER_INFO=0): /api/admin/info expõe versão e URL base — sem modo, proxies ou IP — {"baseUrl": "http://127.0.0.1:37439", "showServerInfo": false, "version": "1.3.0"}
 PASS Tela legada SEM chave conecta e é cadastrada automaticamente
 PASS Tela COM chave exige a chave mesmo no modo LAN
 PASS Sem TRUST_PROXY: X-Forwarded-For/Proto forjados são ignorados (IP=127.0.0.1, sem HSTS, cookie sem Secure) — IP auditado=127.0.0.1
 PASS Modo LAN: webhook para IP privado (172.30.0.2) permitido e entregue
 PASS Modo LAN: loopback continua bloqueado
-PASS Webhook screen_offline disparado para tela sem sinal — {"event": "screen_offline", "label": "tv-nova", "lastSeen": "2026-10-27T12:30:17-03:00", "offlineSeconds": 215, "screen": "tv-nova", "source": "painel-avisos"}
+PASS Webhook screen_offline disparado para tela sem sinal — {"event": "screen_offline", "label": "tv-nova", "lastSeen": "2026-10-27T14:24:47-03:00", "offlineSeconds": 214, "screen": "tv-nova", "source": "painel-avisos"}
 
-RESULTADO: 65/65 verificações OK
+RESULTADO: 70/70 verificações OK

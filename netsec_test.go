@@ -33,11 +33,11 @@ func TestIPAllowed(t *testing.T) {
 		{"64:ff9b::7f00:1", true, false}, // NAT64 -> 127.0.0.1
 		{"224.0.0.1", true, false},
 		{"255.255.255.255", true, false},
-		{"10.60.20.10", false, false},
-		{"10.60.20.10", true, true},
+		{"10.0.0.10", false, false},
+		{"10.0.0.10", true, true},
 		{"172.16.5.4", false, false},
-		{"192.168.1.195", false, false},
-		{"192.168.1.195", true, true},
+		{"192.168.0.50", false, false},
+		{"192.168.0.50", true, true},
 		{"100.64.1.1", false, false}, // CGNAT
 		{"100.64.1.1", true, true},
 		{"fc00::1", false, false},

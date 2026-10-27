@@ -1,10 +1,10 @@
 // Teste no Chrome headless + screenshots 1920x1080 (puppeteer-core).
 // Sobe o servidor sozinho (porta própria, pasta temporária), testa: CSP sem violações no admin
-// e na TV, imagens com chave, tela não autorizada, revogação ao vivo, service worker offline.
+// e na TV, instalação Windows e download .bat, imagens com chave, tela não autorizada, revogação ao vivo, service worker offline.
 // Uso (na pasta com node_modules/puppeteer-core): BIN=../dist/painel-avisos-linux-amd64 OUT=../screenshots node browser_test.mjs
 import puppeteer from "puppeteer-core";
 import { spawn } from "node:child_process";
-import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { mkdtempSync, writeFileSync, rmSync, readFileSync, readdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { randomBytes } from "node:crypto";
@@ -81,7 +81,7 @@ await adm.screenshot({ path: `${OUT}/08-admin-configuracoes.png` });
 {
   const inf = await call("GET", "/api/admin/info");
   const hidden = await adm.$eval("#tech-details", (e) => e.hidden && e.offsetParent === null);
-  check("Padrão: Configurações sem 'Detalhes técnicos' e /api/admin/info só com a versão", hidden && !("server" in inf) && !("trustProxy" in inf) && !("clientIp" in inf), JSON.stringify(inf));
+  check("Padrão: Configurações sem 'Detalhes técnicos' e /api/admin/info com versão e URL base", hidden && !("server" in inf) && !("trustProxy" in inf) && !("clientIp" in inf), JSON.stringify(inf));
 }
 
 // Telas: criar pela UI -> chave exibida uma vez
@@ -92,8 +92,48 @@ await adm.evaluate(() => document.querySelector("#screen-form button").click());
 await adm.waitForFunction(() => !document.getElementById("key-new").hidden, { polling: 100, timeout: 5000 });
 const KEY = await adm.$eval("#key-only", (el) => el.textContent.trim());
 check("Criar tela pela UI mostra a chave uma vez", KEY.startsWith("tk_"), KEY.slice(0, 7) + "…");
+await adm.click("#install-key-button");
+await adm.waitForSelector("#install-modal:not([hidden])");
+check("Instalação: chave recém-gerada já vem preenchida", await adm.$eval("#install-key", (e, key) => e.value === key, KEY));
+await adm.keyboard.press("Escape");
 await call("POST", "/api/admin/screens", { name: "tv-refeitorio", label: "TV do refeitório" });
 await adm.evaluate(() => document.getElementById("close-key").click());
+// Modal de uma tela cuja chave não foi gerada nesta sessão da interface.
+await tab("telas");
+const installerScreen = (await call("GET", "/api/admin/screens")).find(s => s.name === "tv-refeitorio");
+await adm.click(`[data-install="${installerScreen.id}"]`);
+await adm.waitForSelector("#install-modal:not([hidden])");
+check("Instalação: download usa URL base e identificação de monitores", await adm.$eval("#install-fetch", e => e.textContent.includes(location.origin)) && await adm.$eval("#install-monitors", e => e.textContent.includes("-ListMonitors")));
+check("Instalação: chave antiga não reaparece", await adm.$eval("#install-old-key", e => !e.hidden && e.textContent.includes("não pode ser exibida")) && await adm.$eval("#install-command", e => e.textContent.includes("tk_COLE_A_CHAVE_AQUI")));
+adm.once("dialog", d => d.accept());
+await adm.click("#install-new-key");
+await adm.waitForFunction(() => /^tk_[A-Za-z0-9_-]{8,128}$/.test(document.querySelector("#install-key").value));
+const installKey = await adm.$eval("#install-key", e => e.value);
+check("Instalação: gerar nova chave preenche comando", await adm.$eval("#install-command", e => /-Key "tk_[A-Za-z0-9_-]{8,128}"/.test(e.textContent)));
+await adm.type("#install-monitor", "2");
+await adm.click("#install-autologon");
+check("Instalação: monitor e logon automático atualizam comando", await adm.$eval("#install-command", e => e.textContent.includes("-Monitor 2") && e.textContent.includes("-AutoLogon")));
+await adm.$eval("#install-key", e => { e.value = 'chave-invalida;"'; e.dispatchEvent(new Event("input", { bubbles: true })); });
+check("Instalação: chave inválida recusada", await adm.$eval("#install-bat", e => e.disabled) && await adm.$eval("#install-key", e => !e.checkValidity()) && await adm.$eval("#install-command", e => !e.textContent.includes("chave-invalida")));
+await adm.$eval("#install-key", (e, k) => { e.value = k; e.dispatchEvent(new Event("input", { bubbles: true })); }, installKey);
+const downloadDir = mkdtempSync(join(tmpdir(), "painel-download-"));
+try {
+  const cdp = await browser.target().createCDPSession();
+  await cdp.send("Browser.setDownloadBehavior", { behavior: "allow", downloadPath: downloadDir });
+  await adm.click("#install-bat");
+  let file;
+  for (let i = 0; i < 50; i++) { file = readdirSync(downloadDir).find(f => f.endsWith(".bat")); if (file) break; await sleep(100); }
+  const bat = file ? readFileSync(join(downloadDir, file)) : Buffer.alloc(0);
+  const text = bat.toString("ascii");
+  check("Instalação: .bat baixado em ASCII e CRLF com todos os parâmetros", bat.length > 0 && [...bat].every(b => b < 128) && text.includes("\r\n") && !/(?<!\r)\n/.test(text) && ["Invoke-WebRequest", `-Url "${BASE}"`, '-Screen "tv-refeitorio"', `-Key "${installKey}"`, "-Monitor 2", "-AutoLogon"].every(s => text.includes(s)));
+  await cdp.detach();
+} finally { rmSync(downloadDir, { recursive: true, force: true }); }
+await adm.bringToFront();
+await adm.$eval(".install-dialog", e => { e.scrollTop = 0; });
+await adm.screenshot({ path: `${OUT}/10-admin-instalar-na-tv.png` });
+await adm.keyboard.press("Escape");
+check("Instalação: Esc fecha o modal", await adm.$eval("#install-modal", e => e.hidden));
+
 {
   // Varredura de jargão técnico no texto visível de todas as abas do admin
   const FORBIDDEN = ["TRUST_PROXY", "SHOW_SERVER_INFO", "PAINEL_", "CIDR", "SSE", "heartbeat", "Proxies confiáveis", "variáveis de ambiente",

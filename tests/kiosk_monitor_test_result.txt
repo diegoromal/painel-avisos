@@ -40,7 +40,7 @@ PASS Lançador sem resto de expansão na instalação (variáveis do lançador i
 PASS Sem -Monitor: lançador não move janela (comportamento da 1.1.2)
 PASS Lançador resolve o monitor na hora (3 = DISPLAY10)
 PASS Resolução do monitor 3 mudou (4K) → usa o tamanho novo
-PASS Monitor 3 desligado → principal + linha no log — 2026-10-27 12:44:27  monitor: monitor 3 não encontrado (2 monitor(es) conectados); usando o principal \\.\DISPLAY1 [DPI: ]
+PASS Monitor 3 desligado → principal + linha no log — 2026-10-27 14:28:31  monitor: monitor 3 não encontrado (2 monitor(es) conectados); usando o principal \\.\DISPLAY1 [DPI: ]
 PASS Sem -Monitor → nada a resolver
 PASS Test-KioskEdge da tela tv ignora o Edge da tv-2 (abre o seu)
 PASS Test-KioskEdge da tela tv-2 vê o seu Edge

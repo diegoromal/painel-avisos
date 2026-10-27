@@ -1,0 +1,12 @@
+dist/
+data/
+.env
+**/.env
+!deploy/traefik/.env.example
+*.db
+*.db-wal
+*.db-shm
+node_modules/
+*.zip
+backups/
+.DS_Store

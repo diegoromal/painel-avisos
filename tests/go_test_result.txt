@@ -1,3 +1,41 @@
+=== RUN   TestBaseURL
+=== RUN   TestBaseURL/PUBLIC_URL
+=== RUN   TestBaseURL/proxy_confiável
+=== RUN   TestBaseURL/proxy_não_confiável
+=== RUN   TestBaseURL/TLS
+=== RUN   TestBaseURL/LAN
+=== RUN   TestBaseURL/IPv6
+=== RUN   TestBaseURL/IPv6_encaminhado
+=== RUN   TestBaseURL/headers_inválidos
+=== RUN   TestBaseURL/espaço
+=== RUN   TestBaseURL/aspas_simples
+=== RUN   TestBaseURL/ponto_e_vírgula
+=== RUN   TestBaseURL/aspas_duplas
+=== RUN   TestBaseURL/IPv6_inválido
+=== RUN   TestBaseURL/porta_longa
+--- PASS: TestBaseURL (0.00s)
+    --- PASS: TestBaseURL/PUBLIC_URL (0.00s)
+    --- PASS: TestBaseURL/proxy_confiável (0.00s)
+    --- PASS: TestBaseURL/proxy_não_confiável (0.00s)
+    --- PASS: TestBaseURL/TLS (0.00s)
+    --- PASS: TestBaseURL/LAN (0.00s)
+    --- PASS: TestBaseURL/IPv6 (0.00s)
+    --- PASS: TestBaseURL/IPv6_encaminhado (0.00s)
+    --- PASS: TestBaseURL/headers_inválidos (0.00s)
+    --- PASS: TestBaseURL/espaço (0.00s)
+    --- PASS: TestBaseURL/aspas_simples (0.00s)
+    --- PASS: TestBaseURL/ponto_e_vírgula (0.00s)
+    --- PASS: TestBaseURL/aspas_duplas (0.00s)
+    --- PASS: TestBaseURL/IPv6_inválido (0.00s)
+    --- PASS: TestBaseURL/porta_longa (0.00s)
+=== RUN   TestPublicTVInstaller
+--- PASS: TestPublicTVInstaller (0.01s)
+=== RUN   TestInfoBaseURLForLoggedUsers
+=== RUN   TestInfoBaseURLForLoggedUsers/admin
+=== RUN   TestInfoBaseURLForLoggedUsers/leader
+--- PASS: TestInfoBaseURLForLoggedUsers (0.01s)
+    --- PASS: TestInfoBaseURLForLoggedUsers/admin (0.01s)
+    --- PASS: TestInfoBaseURLForLoggedUsers/leader (0.01s)
 === RUN   TestIPAllowed
 --- PASS: TestIPAllowed (0.00s)
 === RUN   TestSafeClientBlocksAtDial
@@ -13,6 +51,6 @@
 === RUN   TestStateCarriesUrgentFields
 --- PASS: TestStateCarriesUrgentFields (0.01s)
 === RUN   TestSaveUrgentSettingsValidation
---- PASS: TestSaveUrgentSettingsValidation (0.00s)
+--- PASS: TestSaveUrgentSettingsValidation (0.01s)
 PASS
-ok  	painel-avisos	0.027s
+ok  	painel-avisos	(cached)

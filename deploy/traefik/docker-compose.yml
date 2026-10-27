@@ -7,7 +7,7 @@ services:
     build:
       context: ../..
       dockerfile: Dockerfile
-    image: painel-avisos:${PAINEL_VERSION:-1.2.1}
+    image: painel-avisos:${PAINEL_VERSION:-1.3.0}
     container_name: painel-avisos
     restart: unless-stopped
     environment:

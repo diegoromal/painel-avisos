@@ -218,6 +218,31 @@
   </main>
   <footer class="app-foot" id="app-foot"></footer>
 </div>
+<div id="install-modal" class="install-overlay" hidden>
+  <div class="panel install-dialog" role="dialog" aria-modal="true" aria-labelledby="install-title" tabindex="-1">
+    <h2 id="install-title"></h2>
+    <p>Faça isto no PC com Windows que fica ligado na TV. Abra o PowerShell (não precisa ser administrador, exceto para o logon automático).</p>
+    <h3>Passo 1 — Baixar o instalador e ver os monitores</h3>
+    <pre class="keybox"><code id="install-fetch"></code></pre><button class="btn sm" data-copy-install="install-fetch">Copiar</button>
+    <pre class="keybox"><code id="install-monitors"></code></pre><button class="btn sm" data-copy-install="install-monitors">Copiar</button>
+    <p>O segundo comando mostra o número em cada monitor por alguns segundos.</p>
+    <a href="/install/tv-kiosk.ps1" download>Baixar o instalador (.ps1)</a>
+    <h3>Passo 2 — Instalar</h3>
+    <label for="install-monitor">Número do monitor (deixe vazio para o principal)</label>
+    <input id="install-monitor" type="number" min="1" max="99" step="1">
+    <label class="radio"><input id="install-autologon" type="checkbox"> Entrar no Windows sozinho ao ligar o PC (logon automático; pede a senha do Windows e exige PowerShell como administrador)</label>
+    <div id="install-old-key" class="notice">Por segurança a chave antiga não pode ser exibida de novo.</div>
+    <button id="install-new-key" class="btn">Gerar nova chave</button>
+    <label for="install-key">Já tenho a chave</label><input id="install-key" type="text" autocomplete="off" spellcheck="false">
+    <p id="install-error" class="error" aria-live="polite"></p>
+    <pre class="keybox"><code id="install-command"></code></pre><button class="btn sm" data-copy-install="install-command">Copiar</button>
+    <p><button id="install-bat" class="btn">Baixar instalador configurado (.bat)</button></p>
+    <p class="small">Este arquivo contém a chave da TV: não compartilhe e apague depois de usar. Para o logon automático, clique com o botão direito &gt; Executar como administrador.</p>
+    <p>Abre o painel em tela cheia ao ligar o PC.<br>Reabre sozinho se fechar.<br>Alt+F4 sai.</p>
+    <p>Para ver como está: <code id="install-status"></code>; para remover: <code id="install-remove"></code></p>
+    <button id="install-close" class="btn ghost">Fechar</button>
+  </div>
+</div>
 <div id="toast" class="toast" hidden></div>
 <script src="/static/admin.js"></script>
 </body>

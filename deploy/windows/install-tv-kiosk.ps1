@@ -34,16 +34,16 @@
 
 .EXAMPLE
   # Servidor publicado na internet (HTTPS) — chave obrigatória:
-  .\install-tv-kiosk.ps1 -Url https://avisos.protatic.qosit.cloud -Screen tv-principal -Key tk_XXXXXXXX
+  .\install-tv-kiosk.ps1 -Url https://avisos.exemplo.com -Screen tv-principal -Key tk_XXXXXXXX
 .EXAMPLE
   # PC com 3 monitores: descobrir o número de cada um e abrir no monitor 3
   .\install-tv-kiosk.ps1 -ListMonitors
-  .\install-tv-kiosk.ps1 -Url https://avisos.protatic.qosit.cloud -Screen tv-principal -Key tk_XXXXXXXX -Monitor 3
+  .\install-tv-kiosk.ps1 -Url https://avisos.exemplo.com -Screen tv-principal -Key tk_XXXXXXXX -Monitor 3
 .EXAMPLE
   # Servidor rodando no próprio PC da TV (LAN):
   .\install-tv-kiosk.ps1 -Server 127.0.0.1:8080 -Screen tv-principal -Key tk_XXXXXXXX
   # Servidor em outro PC da rede:
-  .\install-tv-kiosk.ps1 -Server 192.168.1.195:8080 -Screen tv-refeitorio -Key tk_XXXXXXXX
+  .\install-tv-kiosk.ps1 -Server 192.168.0.50:8080 -Screen tv-refeitorio -Key tk_XXXXXXXX
 .EXAMPLE
   .\install-tv-kiosk.ps1 -Url https://avisos.exemplo.com -Key tk_XXXXXXXX -AutoLogon
   .\install-tv-kiosk.ps1 -AutoLogon -AutoLogonUser DOMINIO\usuario
